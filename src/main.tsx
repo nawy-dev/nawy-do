@@ -5,6 +5,7 @@ import { App } from '@/app/App';
 import { prepareStorage } from '@/app/bootstrap';
 import { listenForInstall } from '@/app/install';
 import { isNativeApp } from '@/app/native/env';
+import { watchSystemBars } from '@/app/native/systemBars';
 import { updateSignal } from '@/app/updateSignal';
 import { loadTheme, syncThemeColor } from '@/ui/theme';
 
@@ -25,7 +26,9 @@ void prepareStorage()
 
 // Registered after the first render so it never delays it. A new version waits for the user.
 // Not inside the Android app: there the page ships in the app itself and Play delivers updates.
-if (!isNativeApp()) {
+if (isNativeApp()) {
+  watchSystemBars();
+} else {
   const updateSW = registerSW({
     onNeedRefresh() {
       updateSignal.set(() => void updateSW(true));
