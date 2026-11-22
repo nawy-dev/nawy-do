@@ -1,6 +1,17 @@
 /* ---------- shell: phone first (top brand, tabs along the top, floating add button) ---------- */
 .shell {
   min-block-size: 100dvh;
+  padding-block-start: var(--safe-top);
+}
+/* Under the status bar the page colour stays put, so scrolled rows never show through it. */
+body::before {
+  content: '';
+  position: fixed;
+  inset-block-start: 0;
+  inset-inline: 0;
+  block-size: var(--safe-top);
+  background: var(--page);
+  z-index: 9;
 }
 .side-head {
   display: flex;
@@ -17,7 +28,7 @@
 .main {
   max-inline-size: 44rem;
   margin-inline: auto;
-  padding: 0.5rem 1rem calc(5rem + env(safe-area-inset-bottom));
+  padding: 0.5rem 1rem calc(5rem + var(--safe-bottom));
 }
 h1 {
   font-size: 1.625rem;
@@ -33,7 +44,7 @@ h2 {
 
 .nav {
   position: sticky;
-  inset-block-start: 0;
+  inset-block-start: var(--safe-top);
   z-index: 5;
   display: flex;
   gap: 0.5rem;
@@ -140,7 +151,7 @@ h2 {
 .fab {
   position: fixed;
   inset-inline-end: 1rem;
-  inset-block-end: calc(1rem + env(safe-area-inset-bottom));
+  inset-block-end: calc(1rem + var(--safe-bottom));
   z-index: 4;
   display: grid;
   place-items: center;
@@ -337,7 +348,7 @@ html {
     inset-inline: 0;
     inset-block-end: 0;
     z-index: 6;
-    padding: 0.5rem 0.75rem calc(0.5rem + env(safe-area-inset-bottom));
+    padding: 0.5rem 0.75rem calc(0.5rem + var(--safe-bottom));
     pointer-events: none; /* only the bar itself takes taps; the list stays scrollable around it */
   }
   .input-dock > * {
@@ -447,7 +458,7 @@ html {
   display: flex;
   flex-direction: column;
   gap: 0.25rem;
-  padding: 0.5rem 0.75rem calc(1rem + env(safe-area-inset-bottom));
+  padding: calc(0.5rem + var(--safe-top)) 0.75rem calc(1rem + var(--safe-bottom));
   background: var(--card);
   box-shadow: 0 0 40px rgb(0 0 0 / 0.3);
   border-start-end-radius: 24px;

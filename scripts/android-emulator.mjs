@@ -100,6 +100,36 @@ shot('details');
 await ev(`${HELPERS} button(/^\\s*حفظ/).click(); await wait(2500);`);
 shot('saved');
 
+// Safe areas (ADR 0047). The emulator's WebView may be older than Chromium 140: then Capacitor pads
+// the WebView itself and both env() and the variable are 0, so this cannot reproduce the overlap a
+// current WebView shows on a real phone. What it CAN check: the shell's top padding is the larger of
+// the two sources, and the side menu opens (screenshot kept).
+const insets = await ev(`${HELPERS}
+  const probe = (css) => { const d = document.createElement('div'); d.style.cssText = 'position:fixed;visibility:hidden;padding-top:' + css; document.body.append(d); const v = parseFloat(getComputedStyle(d).paddingTop); d.remove(); return v; };
+  const env = probe('env(safe-area-inset-top, 0px)');
+  const cap = probe('var(--safe-area-inset-top, 0px)');
+  const pad = parseFloat(getComputedStyle(document.querySelector('.shell')).paddingTop);
+  document.querySelector('[aria-label="القائمة الجانبية"]').click(); await wait(800);
+  const head = document.querySelector('.drawer-head').getBoundingClientRect().top;
+  const drawerPad = parseFloat(getComputedStyle(document.querySelector('.drawer')).paddingTop);
+  document.querySelector('.drawer-backdrop')?.click(); await wait(300);
+  return { env, cap, pad, head, drawerPad };`);
+log('insets:', JSON.stringify(insets));
+shot('drawer-insets');
+log(
+  adb('shell dumpsys webviewupdate')
+    .split('\n')
+    .find((l) => /Current WebView package|versionName/.test(l)) ?? 'webview: unknown',
+);
+const want = Math.max(insets.env, insets.cap);
+if (insets.pad < want || insets.drawerPad < 8 + want) {
+  log(
+    'FAILED: the shell or the side menu ignores the safe area',
+    JSON.stringify({ want, ...insets }),
+  );
+  process.exit(1);
+}
+
 // Let the app hand the plan to the phone, then ask the phone (not the app) what it holds.
 await sleep(3000);
 const alarms = adb(`shell dumpsys alarm`);
