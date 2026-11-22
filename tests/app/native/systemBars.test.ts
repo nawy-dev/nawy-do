@@ -46,6 +46,13 @@ describe('watchSystemBars', () => {
     await new Promise((r) => setTimeout(r, 20));
     expect(bars.setStyle).not.toHaveBeenCalled();
   });
+  it('follows a dark phone while the theme is automatic', async () => {
+    dark = true;
+    const stop = watchSystemBars();
+    await vi.waitFor(() => expect(bars.setStyle).toHaveBeenLastCalledWith({ style: 'DARK' }));
+    stop();
+    dark = false;
+  });
   it('never throws when the plugin fails', async () => {
     bars.setStyle.mockRejectedValueOnce(new Error('no bridge'));
     const stop = watchSystemBars();
