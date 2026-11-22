@@ -1,28 +1,103 @@
-# نسخة أندرويد — دليل المالك والوكلاء
+# نسخة أندرويد — الدليل الكامل (للمالك وللوكلاء)
 
-القرار: [ADR 0045](decisions/0045-android-capacitor.md). الأصل: دليل «تقويم» (`nawy-dev/Taqweem`، `docs/ANDROID_PLAYBOOK.md`).
+القرارات: [ADR 0045](decisions/0045-android-capacitor.md) (الغلاف والتنبيهات) و[ADR 0046](decisions/0046-android-files-share.md) (الملفات والمشاركة). الأصل الذي نُقل عنه: «تقويم» (`nawy-dev/Taqweem`، `docs/ANDROID_PLAYBOOK.md`). النمط المشترك لكل تطبيقات ناوي: `nawy-dev/design-system` ← `patterns/android-capacitor-shell.md`.
+آخر تحديث: 2026-11-22. معرّف التطبيق `todo.nawy.app`، الاسم «ناوي دو».
 
-## ما يعمل الآن (يُتحقق منه في CI)
+## 1. الفكرة في ثلاثة أسطر
 
-- `android-apk.yml`: يبني APK تجريبيًا وينشره في الإصدار التجريبي `android-debug` (يُثبَّت على الهاتف مباشرة).
-- `android-emulator.yml`: يثبت في محاكي (API 34 و35) أن الهاتف يرنّ تنبيه المهمة والتطبيق مغلق.
-- `android-release.yml`: يبني حزمة `.aab` موقّعة لـGoogle Play كمسودة إصدار (يحتاج الأسرار أدناه).
-- المشروع `android/` يُولَّد في CI ولا يُرفع. `appId` = `todo.nawy.app` ولا يتغير بعد أول رفع.
+- التطبيق يبقى **ويب واحد** (Vite + React). لا فرع ولا مجلد أندرويد للتطوير.
+- Capacitor 8 يغلّف مخرجات `vite build` (`webDir: dist`) في تطبيق أندرويد. مشروع `android/` **يُولَّد في CI** بـ`cap add android` ولا يُرفع للمستودع أبدًا (`/android/` في `.gitignore`).
+- كل ما يخص الهاتف (تنبيهات، مشاركة ملفات) في `src/app/native/*` خلف `isNativeApp()`؛ المتصفح لا يتأثر.
 
-## ما يفعله المالك (لا نستطيعه من هنا)
+## 2. خريطة الملفات
 
-1. **مفتاح الرفع** (مرة واحدة، احتفظ بنسخة آمنة منه):
-   `keytool -genkeypair -storetype PKCS12 -keystore upload.p12 -alias upload -keyalg RSA -keysize 2048 -validity 10000`
-   ثم `base64 -w0 upload.p12`.
-2. **ثلاثة أسرار** في المستودع (Settings → Secrets and variables → Actions): `ANDROID_KEYSTORE_BASE64` (ناتج base64)، `ANDROID_KEYSTORE_PASSWORD`، `ANDROID_KEY_ALIAS` (`upload`). فعّل **Play App Signing** عند أول رفع، فالمفتاح هذا «مفتاح رفع» قابل للاستبدال عبر دعم Play.
-3. **حساب مطوّر Play** (25$ مرة واحدة). الحساب الشخصي الجديد يحتاج اختبارًا مغلقًا بـ12 مختبرًا × 14 يومًا متواصلة قبل الإنتاج: ابدأ مبكرًا فهو الاختناق.
-4. **سياسة الخصوصية:** الصفحة جاهزة على `https://do.nawy.app/privacy.html` (عربي وإنجليزي). أدخل هذا الرابط في Play.
-5. **بطاقة المتجر** (الوصف، لقطات الشاشة، الصورة المميّزة 1024×500) ونموذج «أمان البيانات»: الإجابة الصادقة اليوم: لا بيانات تُجمع ولا تُشارَك، لا تشفير نقل لأنه لا نقل.
-6. شغّل `android-release` (Actions → Run workflow)، نزّل `.aab` من المسودة (Releases) وارفعه في Play Console.
+| الملف                                                             | الدور                                                               |
+| ----------------------------------------------------------------- | ------------------------------------------------------------------- |
+| `capacitor.config.json`                                           | `appId`، الاسم، `webDir`، أيقونة/لون التنبيه                        |
+| `src/app/native/env.ts`                                           | `isNativeApp()`: هل نحن داخل الغلاف؟ (بلا استيراد)                  |
+| `src/app/native/plan.ts`                                          | منطق نقي: أي المهام تُجدوَل إنذارات (14 يومًا، حد 60، معرّف ثابت)   |
+| `src/app/native/scheduler.ts`                                     | الواجهة `AlertScheduler` + محوّل Capacitor للتنبيهات المحلية        |
+| `src/app/native/useNativeAlerts.ts`                               | يطابق إنذارات الهاتف مع المهام ويطلب الإذن                          |
+| `src/app/native/share.ts`                                         | كتابة الملف في المخبأ + ورقة مشاركة النظام                          |
+| `src/app/useAlerts.ts`                                            | يختار: إنذارات الهاتف داخل الغلاف، وتنبيهات المتصفح خارجه           |
+| `src/app/files.ts`                                                | مساعدات الملفات: تنزيل المتصفح أو `share.ts` داخل الغلاف            |
+| `tools/android/patch_manifest.py`                                 | يضيف الأذونات لـ`AndroidManifest.xml` المولَّد (يُعاد تشغيله بأمان) |
+| `tools/android/make_icons.py`                                     | يرسم أيقونات التشغيل والتنبيه من علامة ✓ (Pillow)                   |
+| `tools/android/patch_gradle.py`                                   | رقم/اسم الإصدار وتوقيع الإصدار النهائي من متغيرات البيئة            |
+| `tools/android/debug.keystore`                                    | مفتاح تجربة **ثابت** (لا سرّ فيه) ليتحدّث كل APK فوق السابق         |
+| `tools/android/emulator_test.sh` + `scripts/android-emulator.mjs` | اختبار المحاكي (التنبيه والتصدير)                                   |
+| `tools/android/make_store_assets.py` + `play/`                    | لقطات المتجر والصورة المميّزة                                       |
+| `.github/workflows/android-apk.yml`                               | APK تجريبي ← إصدار `android-debug` + تجربة `bundleRelease`          |
+| `.github/workflows/android-emulator.yml`                          | اختبار المحاكي (API 34 و35)                                         |
+| `.github/workflows/android-release.yml`                           | AAB موقّع لـPlay كمسودة إصدار                                       |
+| `public/privacy.html`                                             | سياسة الخصوصية (عربي/إنجليزي) لـPlay                                |
 
-## حدود لم تُتحقق
+## 3. مسار البناء (كل workflow أندرويد يكرره)
 
-- لم يُجرَّب على جهاز حقيقي (توفير الطاقة عند بعض الصانعين قد يؤخر الإنذارات).
-- قبول Play لـ`SCHEDULE_EXACT_ALARM` بلا مراجعة؟ هو إذن يمنحه المستخدم من إعدادات النظام، لكن لم نرفع بعد.
-- البيانات في PWA المثبّت من المتصفح لا تنتقل للتطبيق (أصل مختلف): تصدير «بياناتي» ثم استيراد.
-- الإصدار النهائي لم يُبنَ فعليًا بعد: المسار نفسه جُرّب بمفتاح مؤقت (`bundleRelease`) في `android-apk`.
+`checkout` ← pnpm + Node 24 + Java 21 ← `pnpm install --frozen-lockfile` ← `vite build` ← `cap add android` ← `make_icons.py` ← `patch_manifest.py` ← (للإصدار النهائي: `patch_gradle.py`) ← `cap sync android` ← Gradle (`assembleDebug` أو `bundleRelease`).
+**الترتيب مهم:** الأيقونات والأذونات بعد `cap add` وقبل `cap sync`/Gradle؛ ولا تُفكّ أسرار التوقيع قبل `checkout` (ينظّف مجلد العمل فيمحوها).
+
+## 4. قواعد لا تكسرها
+
+1. **لا ترفع `android/`** ولا مفاتيح (`*.p12`/`*.jks`) ولا أسرار. المسموح الوحيد: `debug.keystore` التجريبي.
+2. **`appId` ثابت** بعد أول رفع على Play. (`do.nawy.app` مرفوض: `do` كلمة محجوزة في Java.)
+3. **كل كود أصلي في `src/app/native/*`** خلف واجهة، ولا يُستورد من `core/data/features/ui`. الإضافات تُحمَّل بـ`import()` فقط. لا تنادِ إضافة Capacitor من مكوّن واجهة.
+4. **لا تُرجع كائن إضافة Capacitor من `async`/`Promise`**: وكيل الإضافة يردّ على أي خاصية بما فيها `then` فيستدعيها `await` وينهار. لفّها في كائن عادي (`return { plugin }`) كما في `scheduler.ts` و`share.ts`.
+5. **إضافة جديدة = ADR + إصدار مثبّت + فحص ترخيص + أثر على ميزانية الحجم** (`scripts/check-budget.mjs`: ارفعها بسبب مكتوب فقط، و`critical` لا تُرفع).
+6. **كل تغيير سلوك = اختبار.** الإضافات تُحاكى بـ`vi.mock` (انظر `tests/app/native/`). ما يلمس الجهاز يُتحقق بـ`android-emulator`.
+7. **الصدق (D-002):** التنبيهات «والتطبيق مغلق» لا تُذكر في الواجهة أو المتجر إلا داخل الغلاف. المتصفح يبقى «والتطبيق مفتوح».
+8. **ملفات TS ≤ 220 سطرًا؛ لا `new Date` خارج `src/app/clock.ts`.**
+9. **لا تدّعِ نجاحًا لم تره:** CI أخضر ≠ يعمل على هاتف حقيقي (انظر §8).
+
+## 5. الطرق المستخدمة
+
+- **التنبيهات:** `planAlerts(tasks, now)` (نقية) تحسب ما يلزم، و`replaceAll` تلغي كل ما في الهاتف وتجدول الخطة من جديد عند كل تغيير. معرّف الإشعار = تجزئة ثابتة من (معرّف المهمة + وقتها) فلا تتكرر. قناة تنبيهات بأهمية 4. إنذارات `allowWhileIdle`.
+- **الأذونات:** `POST_NOTIFICATIONS` يُطلب من القائمة. `SCHEDULE_EXACT_ALARM` (يمنحه المستخدم) بدل `USE_EXACT_ALARM` المحصور بالمنبّهات والتقاويم؛ بدونه تتأخر الإنذارات دقائق.
+- **الملفات:** WebView بلا تنزيل ولا Web Share. `Filesystem.writeFile` إلى `Directory.Cache` ثم `Share.share({files:[uri]})`. الاستيراد `<input type=file>` يعمل بمنتقي النظام.
+- **الخدمة العاملة:** لا تُسجَّل داخل الغلاف (`main.tsx`)؛ التحديث عبر المتجر.
+- **اختبار المحاكي:** يثبّت الـAPK، يمنح الإذنين بـ`adb`، يفتح التطبيق، ويوصل بـWebView عبر `adb forward` إلى `webview_devtools_remote_<pid>` + بروتوكول CDP بـWebSocket خام. يضيف مهمة بوقت بعد دقيقتين، يصدّر نسخة احتياطية ويتحقق من ملف المخبأ ومن ورقة المشاركة (`dumpsys window`)، ثم `HOME` + `am kill` وينتظر 150 ثانية ويقرأ `dumpsys notification`. النجاح = الهاتف عرض الإشعار والتطبيق بلا عملية.
+
+## 6. مشاكل واجهتها وحلولها
+
+| المشكلة                                                            | السبب                                                                                   | الحل                                                                                                                                                                                     |
+| ------------------------------------------------------------------ | --------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| بناء Gradle يفشل: `namespace`/`package` غير صالح                   | `appId` = `do.nawy.app` و`do` كلمة محجوزة في Java                                       | `todo.nawy.app`                                                                                                                                                                          |
+| أول CI بعد إضافة تبعية يفشل في التثبيت                             | القفل `pnpm-lock.yaml` يُولَّد في CI (D-027)                                            | اسحب القفل من الفرع `ci-lockfile` **بعد انتهاء** تشغيل `ci` للـSHA نفسه (`git fetch origin ci-lockfile`)، وتأكد أنه يحوي التبعية الجديدة (`grep`)، ثم commit. سحب قديم يعطي قفلًا ناقصًا |
+| lint: `new Date` ممنوع                                             | قاعدة D-005                                                                             | `dateOfMs()` في `src/app/clock.ts`                                                                                                                                                       |
+| lint: متغير غير مستخدم في اختبار                                   | وسيط محاكاة                                                                             | `vi.fn<(…) => …>(…)` بنوع صريح                                                                                                                                                           |
+| `App.tsx` تجاوز 220 سطرًا                                          | سطور الربط                                                                              | نقل المنطق إلى hook (`useAlerts.ts`)                                                                                                                                                     |
+| Lighthouse SEO < 0.95 على `privacy.html`                           | لا `meta description`                                                                   | أضف الوصف لكل صفحة ثابتة                                                                                                                                                                 |
+| الخدمة العاملة تردّ على `privacy.html` بالتطبيق                    | `navigateFallback` يبتلع أي تنقّل                                                       | `navigateFallbackDenylist: [/privacy\.html$/]` + اختبار                                                                                                                                  |
+| ميزانية الحجم: js 173 > 170                                        | أجزاء الويب الاحتياطية لإضافات Capacitor                                                | رفع `js` إلى 178 و`total` إلى 192 بسبب مكتوب. **متابعة:** إبقاء هذه الأجزاء خارج precache المتصفح                                                                                        |
+| التصدير/المشاركة لا يعملان في التطبيق                              | WebView بلا `a[download]` ولا Web Share                                                 | ADR 0046 (Filesystem + Share)                                                                                                                                                            |
+| `workflow_dispatch` لـworkflow جديد يردّ 404                       | الملف غير موجود في الفرع الافتراضي                                                      | أضف `push: branches: [...]` للفرع، أو ادمجه في `main` أولًا                                                                                                                              |
+| سكربت المحاكي: «Illegal invocation» / حقل غير موجود                | ضبط `value` على React بـ`HTMLInputElement.prototype` لعنصر آخر؛ نافذة التفاصيل لم تُفتح | `Object.getPrototypeOf(el)` + `input` و`change`؛ النقر على المهمة يفتح قائمة إجراءات أولًا فاضغط «تعديل»                                                                                 |
+| سكربت المحاكي ضغط «المزيد» المخفي                                  | يوجد أكثر من زر بالاسم نفسه (واحد مخفي)                                                 | اختر الظاهر بـ`getClientRects().length > 0`                                                                                                                                              |
+| «بياناتي» لا تظهر في «المزيد»                                      | موجودة في القائمة الجانبية                                                              | افتح `aria-label="القائمة الجانبية"` ثم `button.drawer-item`                                                                                                                             |
+| lint على `scripts/*.mjs`: متغير عام غير معرّف                      | `eslint` يعرّف `console/process` فقط                                                    | `/* global fetch, WebSocket, setTimeout */` في أول الملف                                                                                                                                 |
+| فشل عشوائي في «Install Playwright browser»                         | apt/dpkg في المشغّل                                                                     | أعد تشغيل الوظائف الفاشلة (`rerun-failed-jobs`)                                                                                                                                          |
+| حذف فرع مدمج يردّ 403                                              | صلاحيات الرمز                                                                           | تُترك الفروع المدمجة                                                                                                                                                                     |
+| سامسونج A15: «App blocked to protect your device» عند تثبيت الـAPK | Google Play Protect لا يعرف المطوّر (APK تجريبي بمفتاح جديد)                            | اضغط **Install anyway** (النص الصغير، لا «Got it»)؛ أو عطّل «Scan apps» مؤقتًا. يزول بعد النشر على Play. (Auto Blocker في سامسونج حاجز آخر محتمل)                                        |
+| `gh` غير مصادَق في الجلسة                                          | —                                                                                       | REST بـ`curl` و`$GH_TOKEN` مع `Content-Type: application/json`                                                                                                                           |
+
+## 7. كيف تضيف ميزة أصلية جديدة
+
+1. اكتب القرار (ADR) إن كانت تبعية جديدة. 2. ضع الواجهة (`interface`) والمنطق النقي في `src/app/native/` والمحوّل الذي يستورد الإضافة بـ`import()` (ولفّ الإضافة في كائن). 3. اربطها من `src/app/` فقط، وبـ`isNativeApp()`. 4. اختبارات وحدة بمحاكاة الإضافة. 5. إن لزم إذن: أضفه في `patch_manifest.py` وبرّره (سياسة Play). 6. وسّع `scripts/android-emulator.mjs` بخطوة تتحقق من الأثر في النظام. 7. شغّل `android-emulator` على فرعك (`workflow_dispatch` أو فرع `native/android-emulator*`). 8. حدّث `docs/KNOWN-LIMITATIONS.md` وهذا الملف.
+
+## 8. حدود لم تُتحقق
+
+- لم يُجرَّب على **هاتف حقيقي**؛ المحاكي لا يغطي توفير الطاقة الشديد عند بعض الصانعين.
+- منتقي ملفات **الاستيراد** لم يُتحقق منه آليًا.
+- قبول Play لـ`SCHEDULE_EXACT_ALARM` بلا مراجعة غير مؤكد.
+- لم يُرفع شيء إلى Play بعد. الـAAB الموقّع بُني بنجاح (`aab-1.0.1` مسودة) لكنه لم يُفتح في Play Console.
+- بيانات PWA المثبّت لا تنتقل للتطبيق (أصل مختلف `https://localhost`): تصدير «بياناتي» ثم استيراد.
+- ظهر في سجل المحاكي خطأ بدء من Capacitor (`reading 'style'`) لم يُفحص؛ لم يمنع شيئًا.
+
+## 9. خطوات المالك (لا نستطيعها من هنا)
+
+1. **مفتاح الرفع:** `keytool -genkeypair -storetype PKCS12 -keystore upload.p12 -alias upload -keyalg RSA -keysize 2048 -validity 10000` ثم `base64 -w0 upload.p12`. احتفظ بنسخة آمنة.
+2. **أسرار المستودع** (Settings → Secrets and variables → Actions): `ANDROID_KEYSTORE_BASE64` و`ANDROID_KEYSTORE_PASSWORD` و`ANDROID_KEY_ALIAS`. مضافة حاليًا، والبناء الموقّع نجح (بصمة SHA-256 للشهادة تطابق المفتاح).
+3. **حساب مطوّر Play** (25$ مرة). الحساب الشخصي الجديد: اختبار مغلق 12 مختبرًا × 14 يومًا قبل الإنتاج. فعّل Play App Signing عند أول رفع.
+4. **المتجر:** النصوص وإجابات «أمان البيانات» وأذونات تحتاج تبريرًا في [`PLAY_LISTING.md`](PLAY_LISTING.md)؛ الصور في `tools/android/play/`. سياسة الخصوصية: `https://do.nawy.app/privacy.html`.
+5. شغّل `android-release` من Actions ← نزّل `.aab` من Releases (مسودة) ← ارفعه في Play Console.
+6. **للتجربة على هاتفك:** `https://github.com/nawy-dev/nawy-do/releases/download/android-debug/nawy-do-debug.apk`.
