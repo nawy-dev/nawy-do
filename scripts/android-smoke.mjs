@@ -110,6 +110,32 @@ try {
     wait,
   );
   console.log('service worker: activated');
+  // Edge-to-edge (ADR 0047): a phone whose WebView reports a status bar must get a header below it.
+  // Chrome here reports none, so the inset is set the way Capacitor's SystemBars does: as a variable.
+  await page.evaluate(() =>
+    document.documentElement.style.setProperty('--safe-area-inset-top', '48px'),
+  );
+  await page.waitForTimeout(300);
+  await shot('9-inset-home');
+  const inset = await page.evaluate(() => ({
+    pad: parseFloat(getComputedStyle(document.querySelector('.shell')).paddingTop),
+    brand: document.querySelector('.brand')?.getBoundingClientRect().top ?? -1,
+  }));
+  console.log('with a 48px status bar: shell padding', inset.pad, ', brand top', inset.brand);
+  if (inset.pad < 48 || inset.brand < 48)
+    throw new Error('the header ignores the status bar inset');
+  await page.getByRole('button', { name: 'القائمة الجانبية' }).click();
+  await page.waitForTimeout(500);
+  const drawer = await page.evaluate(
+    () => document.querySelector('.drawer-head')?.getBoundingClientRect().top ?? -1,
+  );
+  console.log('side menu head top', drawer);
+  await shot('10-inset-drawer');
+  if (drawer < 48) throw new Error('the side menu opens under the status bar');
+  await page.evaluate(() => document.documentElement.style.removeProperty('--safe-area-inset-top'));
+  await page.reload();
+  await page.getByRole('button', { name: 'نية جديدة' }).waitFor(wait);
+
   // The keyboard shortcuts list opens from the «more» menu.
   await page.getByRole('button', { name: 'المزيد' }).first().click();
   await page.getByRole('menuitem', { name: 'اختصارات لوحة المفاتيح' }).click();
