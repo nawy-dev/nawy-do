@@ -100,26 +100,33 @@ shot('details');
 await ev(`${HELPERS} button(/^\\s*حفظ/).click(); await wait(2500);`);
 shot('saved');
 
-// Edge-to-edge (ADR 0047): the header and the side menu must start below the status bar.
-log(
-  'insets:',
-  JSON.stringify(
-    await ev(`${HELPERS}
-  const top = (sel) => document.querySelector(sel)?.getBoundingClientRect().top;
-  const safe = getComputedStyle(document.querySelector('.shell')).paddingTop;
-  const brand = top('.brand');
+// Safe areas (ADR 0047). The emulator's WebView may be older than Chromium 140: then Capacitor pads
+// the WebView itself and both env() and the variable are 0, so this cannot reproduce the overlap a
+// current WebView shows on a real phone. What it CAN check: the shell's top padding is the larger of
+// the two sources, and the side menu opens (screenshot kept).
+const insets = await ev(`${HELPERS}
+  const probe = (css) => { const d = document.createElement('div'); d.style.cssText = 'position:fixed;visibility:hidden;padding-top:' + css; document.body.append(d); const v = parseFloat(getComputedStyle(d).paddingTop); d.remove(); return v; };
+  const env = probe('env(safe-area-inset-top, 0px)');
+  const cap = probe('var(--safe-area-inset-top, 0px)');
+  const pad = parseFloat(getComputedStyle(document.querySelector('.shell')).paddingTop);
   document.querySelector('[aria-label="القائمة الجانبية"]').click(); await wait(800);
-  const drawerHead = top('.drawer-head');
-  return { safe, brand, drawerHead, status: window.visualViewport?.offsetTop };`),
-  ),
-);
+  const head = document.querySelector('.drawer-head').getBoundingClientRect().top;
+  const drawerPad = parseFloat(getComputedStyle(document.querySelector('.drawer')).paddingTop);
+  document.querySelector('.drawer-backdrop')?.click(); await wait(300);
+  return { env, cap, pad, head, drawerPad };`);
+log('insets:', JSON.stringify(insets));
 shot('drawer-insets');
-await ev(`document.querySelector('.drawer-backdrop')?.click();`);
-const insets = await ev(
-  `${HELPERS} const b = document.querySelector('.brand').getBoundingClientRect().top; const s = parseFloat(getComputedStyle(document.querySelector('.shell')).paddingTop); return { b, s };`,
+log(
+  adb('shell dumpsys webviewupdate')
+    .split('\n')
+    .find((l) => /Current WebView package|versionName/.test(l)) ?? 'webview: unknown',
 );
-if (!(insets.s >= 8) || insets.b < insets.s) {
-  log('FAILED: the header starts inside the status bar area', JSON.stringify(insets));
+const want = Math.max(insets.env, insets.cap);
+if (insets.pad < want || insets.drawerPad < 8 + want) {
+  log(
+    'FAILED: the shell or the side menu ignores the safe area',
+    JSON.stringify({ want, ...insets }),
+  );
   process.exit(1);
 }
 
