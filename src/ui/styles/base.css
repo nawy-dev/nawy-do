@@ -1,3 +1,11 @@
+/* Safe areas: the phone's status bar and gesture bar. env() is right in the browser and in current
+   WebViews; the Android app (Capacitor SystemBars, ADR 0047) also sets --safe-area-inset-* for older
+   WebViews that report 0. The larger of the two wins. */
+:root {
+  --safe-top: max(env(safe-area-inset-top, 0px), var(--safe-area-inset-top, 0px));
+  --safe-bottom: max(env(safe-area-inset-bottom, 0px), var(--safe-area-inset-bottom, 0px));
+}
+
 /* Reset and global element defaults. */
 * {
   box-sizing: border-box;

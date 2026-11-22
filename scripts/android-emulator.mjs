@@ -100,6 +100,29 @@ shot('details');
 await ev(`${HELPERS} button(/^\\s*حفظ/).click(); await wait(2500);`);
 shot('saved');
 
+// Edge-to-edge (ADR 0047): the header and the side menu must start below the status bar.
+log(
+  'insets:',
+  JSON.stringify(
+    await ev(`${HELPERS}
+  const top = (sel) => document.querySelector(sel)?.getBoundingClientRect().top;
+  const safe = getComputedStyle(document.querySelector('.shell')).paddingTop;
+  const brand = top('.brand');
+  document.querySelector('[aria-label="القائمة الجانبية"]').click(); await wait(800);
+  const drawerHead = top('.drawer-head');
+  return { safe, brand, drawerHead, status: window.visualViewport?.offsetTop };`),
+  ),
+);
+shot('drawer-insets');
+await ev(`document.querySelector('.drawer-backdrop')?.click();`);
+const insets = await ev(
+  `${HELPERS} const b = document.querySelector('.brand').getBoundingClientRect().top; const s = parseFloat(getComputedStyle(document.querySelector('.shell')).paddingTop); return { b, s };`,
+);
+if (!(insets.s >= 8) || insets.b < insets.s) {
+  log('FAILED: the header starts inside the status bar area', JSON.stringify(insets));
+  process.exit(1);
+}
+
 // Let the app hand the plan to the phone, then ask the phone (not the app) what it holds.
 await sleep(3000);
 const alarms = adb(`shell dumpsys alarm`);

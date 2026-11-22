@@ -41,7 +41,7 @@
   }
 }
 .sheet:not(:has(.sticky-actions)) {
-  padding-block-end: calc(1rem + env(safe-area-inset-bottom));
+  padding-block-end: calc(1rem + var(--safe-bottom));
 }
 .sheet:focus {
   outline: none; /* focus lands here when the sheet opens; the fields show their own ring */
@@ -124,7 +124,7 @@
   z-index: 1;
   margin-inline: -1rem;
   margin-block-end: 0;
-  padding: 0.75rem 1rem calc(0.75rem + env(safe-area-inset-bottom));
+  padding: 0.75rem 1rem calc(0.75rem + var(--safe-bottom));
   background: var(--card);
   border-block-start: 1px solid var(--line);
 }
