@@ -37,11 +37,12 @@ const send = (method, params = {}) =>
   });
 await send('Runtime.enable');
 /** Runs `code` in the page and returns its value. */
-async function ev(code) {
+async function ev(code, userGesture = false) {
   const r = await send('Runtime.evaluate', {
     expression: `(async () => { ${code} })()`,
     awaitPromise: true,
     returnByValue: true,
+    userGesture,
   });
   if (r.result?.exceptionDetails) {
     throw new Error(r.result.exceptionDetails.exception?.description ?? 'page error');
@@ -196,6 +197,28 @@ if (!wrote || !chooser) {
   log('FAILED: backup export through the share sheet');
   process.exit(1);
 }
+
+// Import: close the share sheet, press "import from a file" (with a user gesture, as a tap is) and
+// ask the phone whether the system file picker came up. Picking a file is the person's part.
+adb('shell input keyevent KEYCODE_BACK');
+await sleep(2000);
+await ev(
+  `${HELPERS}
+  const imp = button(/استيراد من ملف/);
+  if (!imp) throw new Error('import button not found: ' + document.body.innerText.slice(0, 200));
+  imp.click(); await wait(3000);`,
+  true,
+);
+shot('file-picker');
+const pickerWindows = adb('shell dumpsys window windows');
+const picker = /documentsui|DocumentsActivity|FilesActivity|PickerActivity/i.test(pickerWindows);
+log('system file picker on screen:', picker);
+if (!picker) {
+  log('FAILED: "import from a file" did not open the system file picker');
+  process.exit(1);
+}
+adb('shell input keyevent KEYCODE_BACK');
+await sleep(1500);
 ws.close();
 
 // The app goes to the background and its process is ended: the reminder has to come from the phone.
