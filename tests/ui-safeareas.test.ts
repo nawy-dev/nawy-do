@@ -19,7 +19,10 @@ describe('safe areas (ADR 0047)', () => {
     expect(shell).toMatch(
       /\.nav \{[^}]*position: sticky;[^}]*inset-block-start: var\(--safe-top\)/,
     );
-    expect(shell).toMatch(/\.drawer \{[^}]*padding: calc\(0\.5rem \+ var\(--safe-top\)\)/);
+    expect(shell).toMatch(/\.drawer \{[^}]*padding: max\(0\.5rem, var\(--safe-top\)\)/);
+    expect(shell).not.toMatch(/\.drawer \{[^}]*radius/);
+    // The header sits right under the bar: its own top padding shrinks as the inset grows.
+    expect(shell).toContain('padding: max(0px, calc(0.5rem - var(--safe-top))) 0.5rem 0;');
   });
   it('uses no bare env() for the bottom edge any more', () => {
     for (const f of ['shell', 'details', 'feedback', 'tasks']) {

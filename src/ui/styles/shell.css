@@ -17,7 +17,9 @@ body::before {
   display: flex;
   align-items: center;
   gap: 0.25rem;
-  padding: 0.5rem 0.5rem 0;
+  /* Right under the status bar, the way an app bar sits; the 0.5rem breathing room only stays where
+     there is no status bar to give it. */
+  padding: max(0px, calc(0.5rem - var(--safe-top))) 0.5rem 0;
 }
 .brand {
   margin: 0;
@@ -458,11 +460,9 @@ html {
   display: flex;
   flex-direction: column;
   gap: 0.25rem;
-  padding: calc(0.5rem + var(--safe-top)) 0.75rem calc(1rem + var(--safe-bottom));
+  padding: max(0.5rem, var(--safe-top)) 0.75rem calc(1rem + var(--safe-bottom));
   background: var(--card);
   box-shadow: 0 0 40px rgb(0 0 0 / 0.3);
-  border-start-end-radius: 24px;
-  border-end-end-radius: 24px;
   animation: drawer-in var(--nawy-duration-normal, 0.2s) ease-out;
   overflow-y: auto;
 }
