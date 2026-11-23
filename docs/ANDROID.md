@@ -25,7 +25,7 @@
 | `tools/android/make_icons.py`                                     | يرسم أيقونات التشغيل والتنبيه من علامة ✓ (Pillow)                            |
 | `tools/android/patch_gradle.py`                                   | رقم/اسم الإصدار وتوقيع الإصدار النهائي من متغيرات البيئة                     |
 | `tools/android/debug.keystore`                                    | مفتاح تجربة **ثابت** (لا سرّ فيه) ليتحدّث كل APK فوق السابق                  |
-| `tools/android/emulator_test.sh` + `scripts/android-emulator.mjs` | اختبار المحاكي (التنبيه والتصدير والكيبورد)                                  |
+| `tools/android/emulator_test.sh` + `scripts/android-emulator.mjs` | اختبار المحاكي (التنبيه والتصدير والكيبورد ومنتقي ملفات الاستيراد)           |
 | `tools/android/make_store_assets.py` + `play/`                    | لقطات المتجر والصورة المميّزة                                                |
 | `.github/workflows/android-apk.yml`                               | APK تجريبي ← إصدار `android-debug` + تجربة `bundleRelease`                   |
 | `.github/workflows/android-emulator.yml`                          | اختبار المحاكي (API 34 و35)؛ لقطاته على فرعي `ci-screenshots-emulator-<api>` |
