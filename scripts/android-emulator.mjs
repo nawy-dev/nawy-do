@@ -71,8 +71,38 @@ log(
   ),
 );
 
-await ev(`${HELPERS} button(/نية جديدة/).click(); await wait(600);
+const field = await ev(`${HELPERS} button(/نية جديدة/).click(); await wait(600);
   const input = document.querySelector('input[aria-label="ناوي تعمل إيه؟"], [aria-label="ناوي تعمل إيه؟"]');
+  const r = input.getBoundingClientRect();
+  return { x: r.x + r.width / 2, y: r.y + r.height / 2, iw: innerWidth, ih: innerHeight };`);
+
+// Keyboard (ADR 0047 addendum): tap the field like a person, let the soft keyboard come up and ask
+// the phone where it sits. The field must stay above it. Logged always; only a confidently read
+// keyboard position can fail the run, so an emulator without a soft keyboard just logs.
+adb('shell settings put secure show_ime_with_hard_keyboard 1');
+const [pw, ph] = (adb('shell wm size').match(/(\d+)x(\d+)/) ?? []).slice(1).map(Number);
+const k = pw / field.iw;
+adb(`shell input tap ${Math.round(field.x * k)} ${Math.round(field.y * k)}`);
+await sleep(2500);
+shot('keyboard-add');
+const imeDump = adb('shell dumpsys window windows');
+const imeFrame = imeDump.match(
+  /Window\{[^}]*InputMethod[^}]*\}[\s\S]{0,2500}?frame=\[(\d+),(\d+)\]\[(\d+),(\d+)\]/,
+);
+const imeTop = imeFrame ? Number(imeFrame[2]) : undefined;
+const after =
+  await ev(`const i = document.querySelector('[aria-label="ناوي تعمل إيه؟"]'); const r = i.getBoundingClientRect(); const vv = window.visualViewport;
+  return { bottom: r.bottom, ih: innerHeight, vvTop: vv.offsetTop, vvH: vv.height, focused: document.activeElement === i };`);
+log('keyboard:', JSON.stringify({ screen: [pw, ph], k, imeTop, field, after }));
+if (imeTop !== undefined && imeTop > ph * 0.3 && after.focused) {
+  const hiddenBy = after.bottom * k - imeTop;
+  if (hiddenBy > 0) {
+    log('FAILED: the soft keyboard covers the new-task field by', Math.round(hiddenBy), 'px');
+    process.exit(1);
+  }
+}
+await ev(`${HELPERS}
+  const input = document.querySelector('[aria-label="ناوي تعمل إيه؟"]');
   setInput(input, 'Emulator test'); await wait(300);
   button(/^\\s*إضافة/).click(); await wait(1500);`);
 await ev(

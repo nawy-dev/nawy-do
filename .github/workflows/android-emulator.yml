@@ -9,7 +9,7 @@ on:
     branches: ['native/android-emulator*']
 
 permissions:
-  contents: read
+  contents: write # only to publish screenshots to the `ci-screenshots-emulator-<api>` branches
 
 jobs:
   emulator:
@@ -65,3 +65,16 @@ jobs:
         with:
           name: emulator-out-${{ matrix.api }}
           path: emulator-out
+      - name: Publish screenshots to a ci-screenshots-emulator branch
+        if: always()
+        continue-on-error: true
+        run: |
+          [ -d emulator-out ] || exit 0
+          mkdir shots && cp emulator-out/*.png shots/ 2>/dev/null || true
+          cd shots
+          git init -q -b ci-screenshots-emulator-${{ matrix.api }}
+          git config user.name "github-actions"
+          git config user.email "actions@users.noreply.github.com"
+          git add -A
+          git commit -qm "emulator screenshots of ${GITHUB_SHA}"
+          git push -qf "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${GITHUB_REPOSITORY}.git" ci-screenshots-emulator-${{ matrix.api }}
