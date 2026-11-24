@@ -45,6 +45,16 @@ describe('page swipe', () => {
     fire(getByText('row'), 'click', { t: 1330 }); // 250ms after the release
     expect(tap).not.toHaveBeenCalled();
   });
+  it('treats a flick with no move event between press and release as a swipe', () => {
+    const tap = vi.fn();
+    const { getByText, getByTestId } = render(<Surface onTap={tap} />);
+    const surface = getByTestId('surface');
+    fire(surface, 'pointerdown', { x: 200, t: 1000 });
+    fire(surface, 'pointerup', { x: 140, t: 1030 }); // 60px in 30ms, nothing in between
+    fire(getByText('row'), 'click', { t: 1060 });
+    expect(tap).not.toHaveBeenCalled();
+    expect(onStep).toHaveBeenCalled();
+  });
   it('lets a plain tap through, and a tap after a swipe once a new touch starts', () => {
     const tap = vi.fn();
     const { getByText, getByTestId } = render(<Surface onTap={tap} />);
