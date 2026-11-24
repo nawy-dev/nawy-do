@@ -2,8 +2,9 @@ import { isNativeApp } from './native/env';
 import { shareNativeFile, shareNativeText } from './native/share';
 
 /**
- * File helpers: the only place that touches Blob URLs and anchors. Inside the Android app the same
- * calls go through the system share sheet instead (native/share.ts), as a WebView cannot download.
+ * File helpers: the only place that touches Blob URLs and anchors. Inside the Android app a WebView
+ * cannot download, so files go through the system share sheet (native/share.ts); the backup's own
+ * «download» saves to the phone instead (backupFiles.ts).
  */
 export function downloadText(filename: string, text: string, type = 'application/json'): void {
   if (isNativeApp()) {

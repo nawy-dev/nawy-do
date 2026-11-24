@@ -17,9 +17,11 @@ function fromGoogle(text: string, at: number): string {
 /** What the last data action did; the UI turns it into words. */
 export type BackupOutcome =
   | { kind: 'exported' }
+  | { kind: 'saved'; folder: string }
+  | { kind: 'shared' }
   | { kind: 'imported'; total: number; changed: number }
   | { kind: 'restored'; changed: number }
-  | { kind: 'error'; code: EnvelopeError['code'] | 'too-big' | 'failed' };
+  | { kind: 'error'; code: EnvelopeError['code'] | 'too-big' | 'failed' | 'save-failed' };
 
 export interface SnapshotInfo {
   id: number;
@@ -35,6 +37,8 @@ export interface BackupApi {
   refresh: () => Promise<void>;
   /** The backup file's text. */
   exportJson: () => Promise<string>;
+  /** Tells the person what became of the file (the caller knows: saved, shared, or failed). */
+  report: (outcome: BackupOutcome) => void;
   /** Merges a backup file's text into the data. A bad file changes nothing. */
   importText: (text: string) => Promise<void>;
   restore: (id: number) => Promise<void>;
@@ -72,9 +76,7 @@ export function useBackup(repo: BackupRepository, now: () => number): BackupApi 
   }, [repo]);
 
   const exportJson = useCallback(async () => {
-    const text = await repo.export(now());
-    setOutcome({ kind: 'exported' });
-    return text;
+    return repo.export(now());
   }, [repo, now]);
 
   const run = useCallback(
@@ -105,5 +107,5 @@ export function useBackup(repo: BackupRepository, now: () => number): BackupApi 
     [copies, run],
   );
 
-  return { snapshots, outcome, refresh, exportJson, importText, restore };
+  return { snapshots, outcome, refresh, exportJson, report: setOutcome, importText, restore };
 }

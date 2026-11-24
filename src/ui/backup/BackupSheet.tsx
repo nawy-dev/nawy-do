@@ -5,6 +5,8 @@ import { Sheet } from '../sheet';
 
 export type Outcome =
   | { kind: 'exported' }
+  | { kind: 'saved'; folder: string }
+  | { kind: 'shared' }
   | { kind: 'imported'; total: number; changed: number }
   | { kind: 'restored'; changed: number }
   | { kind: 'error'; code: string };
@@ -37,6 +39,7 @@ const ERRORS: Record<string, MessageKey> = {
   'too-many-records': 'backup.err.big',
   'too-big': 'backup.err.big',
   failed: 'backup.err.failed',
+  'save-failed': 'backup.err.save',
 };
 
 type Translate = (key: MessageKey, params?: Params) => string;
@@ -45,6 +48,10 @@ export function describeOutcome(o: Outcome, t: Translate, num: (n: number) => st
   switch (o.kind) {
     case 'exported':
       return t('backup.exported');
+    case 'saved':
+      return t('backup.saved', { folder: o.folder });
+    case 'shared':
+      return t('backup.shared');
     case 'imported':
       return o.changed === 0
         ? t('backup.importedNone')
