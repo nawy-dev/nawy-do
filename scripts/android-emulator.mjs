@@ -221,6 +221,30 @@ if (bad.length) {
   process.exit(1);
 }
 
+// Focus ring: opening a task with a finger and closing its sheet must not leave a square outline
+// around the row (the ring is for keyboards; a touch gives none).
+{
+  const at = await ev(`${HELPERS}
+    const b = [...document.querySelectorAll('button')].find((e) => e.getClientRects().length && /تفاصيل: /.test(e.getAttribute('aria-label') ?? e.textContent));
+    if (!b) return null; const r = b.getBoundingClientRect();
+    return { x: r.x + Math.min(r.width / 2, 60), y: r.y + r.height / 2 };`);
+  if (!at) throw new Error('no task to tap for the focus check');
+  adb(`shell input tap ${Math.round(origin.x + at.x * sk)} ${Math.round(origin.y + at.y * sk)}`);
+  await sleep(1500);
+  const opened = await ev(`return document.querySelectorAll('.sheet').length;`);
+  await ev(`document.querySelector('.backdrop')?.click();`);
+  await sleep(1000);
+  shot('focus-after-sheet');
+  const ring = await ev(`const a = document.activeElement; const cs = getComputedStyle(a);
+    return { tag: a.tagName, label: a.getAttribute('aria-label'), outline: cs.outlineStyle, width: cs.outlineWidth, focusVisible: a.matches(':focus-visible') };`);
+  log('focus after closing the sheet:', JSON.stringify({ opened, ...ring }));
+  if (opened !== 1) throw new Error('the tap did not open the task');
+  if (ring.outline !== 'none' && !['INPUT', 'TEXTAREA', 'SELECT'].includes(ring.tag)) {
+    log('FAILED: a focus outline is left around the task after a touch');
+    process.exit(1);
+  }
+}
+
 // Safe areas (ADR 0047). The emulator's WebView may be older than Chromium 140: then Capacitor pads
 // the WebView itself and both env() and the variable are 0, so this cannot reproduce the overlap a
 // current WebView shows on a real phone. What it CAN check: the shell's top padding is the larger of
