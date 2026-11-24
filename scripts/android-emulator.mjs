@@ -141,17 +141,25 @@ await ev(`${HELPERS}
     setInput(document.querySelector('[aria-label="ناوي تعمل إيه؟"]'), name); await wait(300);
     button(/^\\s*إضافة/).click(); await wait(1200);
   }`);
-const touch = (type, x, y) =>
-  send('Input.dispatchTouchEvent', { type, touchPoints: type === 'touchEnd' ? [] : [{ x, y }] });
-async function swipe({ dx, dy = 0, hold = 0, ms }, from) {
-  const steps = Math.max(4, Math.round(ms / 16));
-  await touch('touchStart', from.x, from.y);
-  if (hold) await sleep(hold);
-  for (let i = 1; i <= steps; i += 1) {
-    await touch('touchMove', from.x + (dx * i) / steps, from.y + (dy * i) / steps);
-    await sleep(ms / steps);
-  }
-  await touch('touchEnd', from.x + dx, from.y + dy);
+// Real touches from the system (adb input), not synthetic page events: the same pipeline a finger
+// uses. First learn where the page sits on the screen by tapping on the title.
+adb('shell settings put global hide_error_dialogs 1');
+
+const probe = ev(
+  `return await new Promise((r) => addEventListener('pointerdown', (e) => r({ x: e.clientX, y: e.clientY, iw: innerWidth }), { once: true, capture: true }));`,
+);
+await sleep(300);
+adb('shell input tap 160 60');
+const seen = await probe;
+const sk = pw / seen.iw;
+const origin = { x: 160 - seen.x * sk, y: 60 - seen.y * sk };
+log('screen origin of the page:', JSON.stringify({ sk, ...origin }));
+async function swipe({ dx, dy = 0, ms }, from) {
+  const x1 = Math.round(origin.x + from.x * sk);
+  const y1 = Math.round(origin.y + from.y * sk);
+  adb(
+    `shell input swipe ${x1} ${y1} ${Math.round(x1 + dx * sk)} ${Math.round(y1 + dy * sk)} ${ms}`,
+  );
 }
 const PAGE = `({
   dialogs: document.querySelectorAll('[role=dialog]').length,
@@ -161,19 +169,19 @@ const PAGE = `({
 })`;
 const cases = [
   { name: 'flick 40px/40ms', dx: 40, ms: 40 },
+  { name: 'flick 60px/30ms', dx: 60, ms: 30 },
   { name: 'flick 90px/60ms', dx: 90, ms: 60 },
   { name: 'drag 150px/300ms', dx: 150, ms: 300 },
   { name: 'slow drag 150px/800ms', dx: 150, ms: 800 },
   { name: 'short 14px/80ms', dx: 14, ms: 80 },
   { name: 'short 22px/120ms', dx: 22, ms: 120 },
+  { name: 'short 30px/200ms', dx: 30, ms: 200 },
   { name: 'diagonal 70x25/150ms', dx: 70, dy: 25, ms: 150 },
-  { name: 'hold 300ms then 100px/200ms', dx: 100, hold: 300, ms: 200 },
-  { name: 'hold 450ms then 100px/200ms', dx: 100, hold: 450, ms: 200 },
-  { name: 'hold 600ms then 100px/200ms', dx: 100, hold: 600, ms: 200 },
+  { name: 'diagonal 50x40/120ms', dx: 50, dy: 40, ms: 120 },
 ];
 const bad = [];
 for (const c of cases) {
-  for (const dir of [-1, 1]) {
+  for (const dir of [-1, 1, -1, 1]) {
     const from = await ev(`${HELPERS}
       const b = [...document.querySelectorAll('button')].find((e) => e.getClientRects().length && /تفاصيل: /.test(e.getAttribute('aria-label') ?? e.textContent));
       if (!b) return null; const r = b.getBoundingClientRect();
