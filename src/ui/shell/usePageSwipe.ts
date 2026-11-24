@@ -4,6 +4,7 @@ const LOCK = 8; // px of travel that decides "swipe" or "scroll"
 const IGNORE = 'input, textarea, select, [data-no-press], [role="dialog"]';
 const OUT_MS = 140;
 const IN_MS = 190;
+const QUIET_MS = 500; // a swipe's release can be followed by a late click on a slow or busy phone
 
 interface Options {
   /** Whether a neighbour exists in that direction (1 = next, -1 = previous). */
@@ -32,6 +33,7 @@ export function usePageSwipe(
     if (!node || !page) return;
     let s: { x: number; y: number; t: number; id: number; drag: boolean } | null = null;
     let busy = false;
+    let quietUntil = 0; // clicks before this moment belong to a swipe that just ended
     const reduced = () => window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? true;
     const rtl = () => getComputedStyle(node).direction === 'rtl';
     const forward = (dx: number): 1 | -1 => ((rtl() ? dx > 0 : dx < 0) ? 1 : -1);
@@ -45,6 +47,7 @@ export function usePageSwipe(
     const down = (e: PointerEvent) => {
       if (!latest.current.enabled || busy || e.pointerType === 'mouse') return;
       if ((e.target as Element).closest(IGNORE)) return;
+      quietUntil = 0; // a new touch: its own click is wanted
       s = { x: e.clientX, y: e.clientY, t: e.timeStamp, id: e.pointerId, drag: false };
     };
     const move = (e: PointerEvent) => {
@@ -70,7 +73,10 @@ export function usePageSwipe(
       page.style.transform = `translateX(${shown}px)`;
       page.style.opacity = String(1 - Math.min(Math.abs(shown) / page.offsetWidth, 1) * 0.5);
     };
+    // The release of a swipe must not also click whatever is under the finger. The browser may deliver
+    // that click well after the release, so it is a window of time, not one event or a few ms.
     const swallow = (e: Event) => {
+      if (e.timeStamp >= quietUntil) return;
       e.stopPropagation();
       e.preventDefault();
     };
@@ -82,9 +88,7 @@ export function usePageSwipe(
       const velocity = Math.abs(dx) / Math.max(e.timeStamp - cur.t, 1);
       const delta = forward(dx);
       const far = Math.abs(dx) > page.offsetWidth * 0.25 || (velocity > 0.5 && Math.abs(dx) > 30);
-      // The release must not also click whatever is under the finger.
-      node.addEventListener('click', swallow, { capture: true, once: true });
-      window.setTimeout(() => node.removeEventListener('click', swallow, true), 50);
+      quietUntil = e.timeStamp + QUIET_MS;
       if (!far || !latest.current.canStep(delta)) return reset(reduced() ? 0 : IN_MS);
       if (reduced()) {
         reset(0);
@@ -111,11 +115,13 @@ export function usePageSwipe(
       s = null;
     };
 
+    node.addEventListener('click', swallow, true);
     node.addEventListener('pointerdown', down);
     node.addEventListener('pointermove', move);
     node.addEventListener('pointerup', up);
     node.addEventListener('pointercancel', cancel);
     return () => {
+      node.removeEventListener('click', swallow, true);
       node.removeEventListener('pointerdown', down);
       node.removeEventListener('pointermove', move);
       node.removeEventListener('pointerup', up);
