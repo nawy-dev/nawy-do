@@ -245,6 +245,22 @@ if (bad.length) {
   }
 }
 
+// Share target (ADR 0048), app running: text shared from another app becomes a task.
+await ev(
+  `[...document.querySelectorAll('.nav-item')].find((e) => /نواياي/.test(e.textContent))?.click(); await new Promise((r) => setTimeout(r, 600));`,
+);
+adb(
+  `shell am start -n ${PKG}/.MainActivity -a android.intent.action.SEND -t text/plain -e android.intent.extra.SUBJECT TitleWarm -e android.intent.extra.TEXT SharedWarm`,
+);
+await sleep(3500);
+shot('shared-warm');
+const sharedWarm = await ev(`return document.body.innerText.includes('SharedWarm');`);
+log('text shared while the app was open became a task:', sharedWarm);
+if (!sharedWarm) {
+  log('FAILED: shared text did not arrive while the app was running');
+  process.exit(1);
+}
+
 // Safe areas (ADR 0047). The emulator's WebView may be older than Chromium 140: then Capacitor pads
 // the WebView itself and both env() and the variable are 0, so this cannot reproduce the overlap a
 // current WebView shows on a real phone. What it CAN check: the shell's top padding is the larger of
@@ -377,3 +393,50 @@ if (!posted || held === 0) {
   process.exit(1);
 }
 log('OK: the phone rang the reminder');
+
+// Share target, app closed (the process was ended above): the share starts the app and is not lost.
+adb('shell input keyevent KEYCODE_HOME');
+adb(`shell am force-stop ${PKG}`);
+await sleep(1000);
+adb(
+  `shell am start -n ${PKG}/.MainActivity -a android.intent.action.SEND -t text/plain -e android.intent.extra.TEXT SharedCold`,
+);
+let sharedCold = false;
+for (let i = 0; i < 12 && !sharedCold; i += 1) {
+  await sleep(2500);
+  try {
+    const pid = adb(`shell pidof ${PKG} || true`).trim();
+    if (!pid) continue;
+    adb(`forward tcp:9222 localabstract:webview_devtools_remote_${pid}`);
+    const page = (await (await fetch('http://127.0.0.1:9222/json')).json()).find(
+      (t) => t.type === 'page',
+    );
+    if (!page) continue;
+    const sock = new WebSocket(page.webSocketDebuggerUrl);
+    await new Promise((res, rej) => {
+      sock.onopen = res;
+      sock.onerror = () => rej(new Error('websocket failed'));
+    });
+    const text = await new Promise((res) => {
+      sock.onmessage = (m) => res(JSON.parse(m.data).result?.result?.value);
+      sock.send(
+        JSON.stringify({
+          id: 1,
+          method: 'Runtime.evaluate',
+          params: { expression: 'document.body.innerText', returnByValue: true },
+        }),
+      );
+    });
+    sock.close();
+    sharedCold = typeof text === 'string' && text.includes('SharedCold');
+  } catch (e) {
+    log('cold share check retry:', String(e).slice(0, 80));
+  }
+}
+shot('shared-cold');
+log('text shared while the app was closed became a task:', sharedCold);
+if (!sharedCold) {
+  log('FAILED: shared text did not arrive on a cold start');
+  process.exit(1);
+}
+log('OK: sharing into the app works, open or closed');

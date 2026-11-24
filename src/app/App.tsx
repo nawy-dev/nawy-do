@@ -23,6 +23,7 @@ import { downloadBackup, shareBackup } from './backupFiles';
 import { getDb } from './db';
 import { canShareFile, canShareText, copyText, downloadText, shareTextOnly } from './files';
 import { installSignal } from './install';
+import { useNativeLaunch } from './native/useNativeLaunch';
 import { useAlerts } from './useAlerts';
 import { newId } from './ids';
 import { loadLang, loadSort, saveLang, saveSort } from './prefs';
@@ -94,6 +95,7 @@ export function App({ repositories, db, now = systemClock, today = systemToday }
     shareDone.current = true;
     void add(launch.shared);
   }, [launch, add]);
+  useNativeLaunch((text) => void add(text), now);
 
   // The sheet shows the task as it is now; if it was deleted elsewhere it simply closes.
   const editing = tasks.tasks.find((t) => t.id === openId);

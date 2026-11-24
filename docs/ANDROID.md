@@ -11,26 +11,27 @@
 
 ## 2. خريطة الملفات
 
-| الملف                                                             | الدور                                                                        |
-| ----------------------------------------------------------------- | ---------------------------------------------------------------------------- |
-| `capacitor.config.json`                                           | `appId`، الاسم، `webDir`، أيقونة/لون التنبيه                                 |
-| `src/app/native/env.ts`                                           | `isNativeApp()`: هل نحن داخل الغلاف؟ (بلا استيراد)                           |
-| `src/app/native/plan.ts`                                          | منطق نقي: أي المهام تُجدوَل إنذارات (14 يومًا، حد 60، معرّف ثابت)            |
-| `src/app/native/scheduler.ts`                                     | الواجهة `AlertScheduler` + محوّل Capacitor للتنبيهات المحلية                 |
-| `src/app/native/useNativeAlerts.ts`                               | يطابق إنذارات الهاتف مع المهام ويطلب الإذن                                   |
-| `src/app/native/share.ts`                                         | كتابة الملف في المخبأ + ورقة مشاركة النظام                                   |
-| `src/app/useAlerts.ts`                                            | يختار: إنذارات الهاتف داخل الغلاف، وتنبيهات المتصفح خارجه                    |
-| `src/app/files.ts`                                                | مساعدات الملفات: تنزيل المتصفح أو `share.ts` داخل الغلاف                     |
-| `tools/android/patch_manifest.py`                                 | يضيف الأذونات لـ`AndroidManifest.xml` المولَّد (يُعاد تشغيله بأمان)          |
-| `tools/android/make_icons.py`                                     | يرسم أيقونات التشغيل والتنبيه من علامة ✓ (Pillow)                            |
-| `tools/android/patch_gradle.py`                                   | رقم/اسم الإصدار وتوقيع الإصدار النهائي من متغيرات البيئة                     |
-| `tools/android/debug.keystore`                                    | مفتاح تجربة **ثابت** (لا سرّ فيه) ليتحدّث كل APK فوق السابق                  |
-| `tools/android/emulator_test.sh` + `scripts/android-emulator.mjs` | اختبار المحاكي (التنبيه والتصدير والكيبورد ومنتقي ملفات الاستيراد)           |
-| `tools/android/make_store_assets.py` + `play/`                    | لقطات المتجر والصورة المميّزة                                                |
-| `.github/workflows/android-apk.yml`                               | APK تجريبي ← إصدار `android-debug` + تجربة `bundleRelease`                   |
-| `.github/workflows/android-emulator.yml`                          | اختبار المحاكي (API 34 و35)؛ لقطاته على فرعي `ci-screenshots-emulator-<api>` |
-| `.github/workflows/android-release.yml`                           | AAB موقّع لـPlay كمسودة إصدار                                                |
-| `public/privacy.html`                                             | سياسة الخصوصية (عربي/إنجليزي) لـPlay                                         |
+| الملف                                                                                          | الدور                                                                                               |
+| ---------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
+| `capacitor.config.json`                                                                        | `appId`، الاسم، `webDir`، أيقونة/لون التنبيه                                                        |
+| `src/app/native/env.ts`                                                                        | `isNativeApp()`: هل نحن داخل الغلاف؟ (بلا استيراد)                                                  |
+| `src/app/native/plan.ts`                                                                       | منطق نقي: أي المهام تُجدوَل إنذارات (14 يومًا، حد 60، معرّف ثابت)                                   |
+| `src/app/native/scheduler.ts`                                                                  | الواجهة `AlertScheduler` + محوّل Capacitor للتنبيهات المحلية                                        |
+| `src/app/native/useNativeAlerts.ts`                                                            | يطابق إنذارات الهاتف مع المهام ويطلب الإذن                                                          |
+| `src/app/native/share.ts`                                                                      | كتابة الملف في المخبأ + ورقة مشاركة النظام                                                          |
+| `src/app/useAlerts.ts`                                                                         | يختار: إنذارات الهاتف داخل الغلاف، وتنبيهات المتصفح خارجه                                           |
+| `src/app/files.ts`                                                                             | مساعدات الملفات: تنزيل المتصفح أو `share.ts` داخل الغلاف                                            |
+| `tools/android/patch_main_activity.py` + `src/app/native/launchLinks.ts`, `useNativeLaunch.ts` | استقبال نص مشارَك من تطبيقات أخرى: `MainActivity` تحوّل `SEND` إلى رابط `nawydo://share` (ADR 0048) |
+| `tools/android/patch_manifest.py`                                                              | يضيف الأذونات لـ`AndroidManifest.xml` المولَّد (يُعاد تشغيله بأمان)                                 |
+| `tools/android/make_icons.py`                                                                  | يرسم أيقونات التشغيل والتنبيه من علامة ✓ (Pillow)                                                   |
+| `tools/android/patch_gradle.py`                                                                | رقم/اسم الإصدار وتوقيع الإصدار النهائي من متغيرات البيئة                                            |
+| `tools/android/debug.keystore`                                                                 | مفتاح تجربة **ثابت** (لا سرّ فيه) ليتحدّث كل APK فوق السابق                                         |
+| `tools/android/emulator_test.sh` + `scripts/android-emulator.mjs`                              | اختبار المحاكي (التنبيه والتصدير والكيبورد ومنتقي ملفات الاستيراد)                                  |
+| `tools/android/make_store_assets.py` + `play/`                                                 | لقطات المتجر والصورة المميّزة                                                                       |
+| `.github/workflows/android-apk.yml`                                                            | APK تجريبي ← إصدار `android-debug` + تجربة `bundleRelease`                                          |
+| `.github/workflows/android-emulator.yml`                                                       | اختبار المحاكي (API 34 و35)؛ لقطاته على فرعي `ci-screenshots-emulator-<api>`                        |
+| `.github/workflows/android-release.yml`                                                        | AAB موقّع لـPlay كمسودة إصدار                                                                       |
+| `public/privacy.html`                                                                          | سياسة الخصوصية (عربي/إنجليزي) لـPlay                                                                |
 
 ## 3. مسار البناء (كل workflow أندرويد يكرره)
 
