@@ -162,7 +162,8 @@ async function swipe({ dx, dy = 0, ms }, from) {
   );
 }
 const PAGE = `({
-  dialogs: document.querySelectorAll('[role=dialog]').length,
+  sheets: document.querySelectorAll('.sheet').length,
+  drawers: document.querySelectorAll('.drawer').length,
   select: Boolean(document.querySelector('.select-bar')),
   view: document.querySelector('.nav [aria-current=page]')?.textContent ?? '',
   text: document.body.innerText.slice(0, 80).replace(/\\s+/g, ' '),
@@ -194,17 +195,22 @@ for (const c of cases) {
     await swipe({ ...c, dx: c.dx * dir }, from);
     await sleep(700);
     const after = await ev(`return ${PAGE};`);
-    const opened = after.dialogs > before.dialogs || after.select !== before.select;
+    const opened =
+      after.sheets > before.sheets ||
+      after.drawers > before.drawers ||
+      after.select !== before.select;
     log(
       'swipe',
       c.name,
       dir > 0 ? '→' : '←',
-      JSON.stringify({ moved: before.view !== after.view, opened }),
+      JSON.stringify({ moved: before.view !== after.view, opened, before, after }),
     );
     if (opened) {
       bad.push(`${c.name} ${dir > 0 ? '→' : '←'}`);
       shot('swipe-' + bad.length);
-      adb('shell input keyevent KEYCODE_BACK');
+      await ev(
+        `document.querySelector('.backdrop, .drawer-backdrop')?.click(); document.querySelector('.select-bar [aria-label]')?.click();`,
+      );
       await sleep(800);
     }
   }
