@@ -45,7 +45,12 @@ const send = (method, params = {}) =>
             'shell dumpsys activity processes | grep -i "anr\\|not responding" | head -5 || true',
           ),
         );
-        log(adb('logcat -d -t 60 *:E chromium:W Capacitor:W AndroidRuntime:E | tail -40 || true'));
+        log(adb('logcat -b crash -d | tail -30 || true'));
+        log(
+          adb(
+            'logcat -d | grep -i "todo.nawy\\|FATAL\\|has died\\|killing\\|am_crash\\|am_proc_died\\|Process: " | tail -40 || true',
+          ),
+        );
       } catch (e) {
         log('diagnostics failed:', String(e).slice(0, 120));
       }
