@@ -216,7 +216,7 @@ for (const c of cases) {
   }
 }
 log('swipes that opened a task or the selection bar:', JSON.stringify(bad));
-if (process.env.SWIPE_STRICT === '1' && bad.length) {
+if (bad.length) {
   log('FAILED: a swipe between lists was read as a press');
   process.exit(1);
 }
