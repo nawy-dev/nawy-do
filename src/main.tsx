@@ -7,9 +7,11 @@ import { listenForInstall } from '@/app/install';
 import { isNativeApp } from '@/app/native/env';
 import { watchSystemBars } from '@/app/native/systemBars';
 import { updateSignal } from '@/app/updateSignal';
+import { watchInputMode } from '@/ui/inputMode';
 import { loadTheme, syncThemeColor } from '@/ui/theme';
 
 listenForInstall();
+watchInputMode();
 syncThemeColor(loadTheme());
 const root = document.getElementById('root');
 if (!root) throw new Error('#root is missing');
