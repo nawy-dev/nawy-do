@@ -83,8 +83,14 @@ export function usePageSwipe(
     const up = (e: PointerEvent) => {
       const cur = s;
       s = null;
-      if (!cur?.drag || cur.id !== e.pointerId) return;
+      if (!cur || cur.id !== e.pointerId) return;
       const dx = e.clientX - cur.x;
+      // A very fast flick can reach us as a press and a release far apart with no move between.
+      if (!cur.drag && Math.abs(dx) > LOCK && Math.abs(dx) > Math.abs(e.clientY - cur.y)) {
+        cur.drag = true;
+        page.style.transition = 'none';
+      }
+      if (!cur.drag) return;
       const velocity = Math.abs(dx) / Math.max(e.timeStamp - cur.t, 1);
       const delta = forward(dx);
       const far = Math.abs(dx) > page.offsetWidth * 0.25 || (velocity > 0.5 && Math.abs(dx) > 30);

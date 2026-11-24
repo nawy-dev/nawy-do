@@ -52,3 +52,9 @@ body {
     -webkit-tap-highlight-color: transparent;
   }
 }
+
+/* The focus ring is for keyboards (ui/inputMode.ts): after a touch or a click nothing stays outlined,
+   e.g. the row a closed sheet hands focus back to. Fields keep their own ring. */
+html[data-input='pointer'] :is(button, a, [role='button'], [tabindex]):focus-visible {
+  outline: none;
+}
