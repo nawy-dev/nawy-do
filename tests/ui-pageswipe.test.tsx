@@ -1,9 +1,10 @@
-import { render } from '@testing-library/react';
+import { cleanup, render } from '@testing-library/react';
 import { useRef } from 'react';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { usePageSwipe } from '@/ui/shell/usePageSwipe';
 
 const onStep = vi.fn();
+afterEach(cleanup);
 
 function Surface({ onTap }: { onTap: () => void }) {
   const main = useRef<HTMLElement>(null);
