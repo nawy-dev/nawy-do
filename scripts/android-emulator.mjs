@@ -30,10 +30,27 @@ ws.onmessage = (m) => {
   }
 };
 const send = (method, params = {}) =>
-  new Promise((res) => {
+  new Promise((res, rej) => {
     id += 1;
     pending.set(id, res);
     ws.send(JSON.stringify({ id, method, params }));
+    // A page that stops answering must say so (and what the phone was doing), not hang the run.
+    setTimeout(() => {
+      if (!pending.delete(id)) return;
+      log('NO ANSWER from the page to', method, 'in 40s; phone state follows');
+      try {
+        adb(`exec-out screencap -p > ${out}/no-answer.png`);
+        log(
+          adb(
+            'shell dumpsys activity processes | grep -i "anr\\|not responding" | head -5 || true',
+          ),
+        );
+        log(adb('logcat -d -t 60 *:E chromium:W Capacitor:W AndroidRuntime:E | tail -40 || true'));
+      } catch (e) {
+        log('diagnostics failed:', String(e).slice(0, 120));
+      }
+      rej(new Error(`no answer to ${method}`));
+    }, 40_000);
   });
 await send('Runtime.enable');
 /** Runs `code` in the page and returns its value. */
