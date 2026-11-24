@@ -1,16 +1,20 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-const fs = vi.hoisted(() => ({ writeFile: vi.fn() }));
+const fs = vi.hoisted(() => ({
+  writeFile: vi.fn(),
+  checkPermissions: vi.fn(),
+  requestPermissions: vi.fn(),
+}));
 const share = vi.hoisted(() => ({ share: vi.fn() }));
 vi.mock('@capacitor/filesystem', () => ({
   Filesystem: fs,
-  Directory: { Cache: 'CACHE' },
+  Directory: { Cache: 'CACHE', Documents: 'DOCS' },
   Encoding: { UTF8: 'utf8' },
 }));
 vi.mock('@capacitor/share', () => ({ Share: share }));
 
 import { canShareFile, canShareText, downloadText, shareText, shareTextOnly } from '@/app/files';
-import { shareNativeFile, shareNativeText } from '@/app/native/share';
+import { saveNativeFile, shareNativeFile, shareNativeText } from '@/app/native/share';
 
 const native = (on: boolean) => {
   const w = window as unknown as Record<string, unknown>;
@@ -22,6 +26,8 @@ beforeEach(() => {
   vi.clearAllMocks();
   fs.writeFile.mockResolvedValue({ uri: 'file:///cache/b.json' });
   share.share.mockResolvedValue({});
+  fs.checkPermissions.mockResolvedValue({ publicStorage: 'granted' });
+  fs.requestPermissions.mockResolvedValue({ publicStorage: 'granted' });
 });
 afterEach(() => native(false));
 
@@ -44,6 +50,33 @@ describe('native share', () => {
   it('shares plain text', async () => {
     expect(await shareNativeText('عنوان', 'نص')).toBe(true);
     expect(share.share).toHaveBeenCalledWith({ title: 'عنوان', text: 'نص' });
+  });
+});
+
+describe('save on the phone', () => {
+  it('writes into Documents/Nawy and names the folder', async () => {
+    expect(await saveNativeFile('b.json', '{"a":1}')).toBe('Documents/Nawy');
+    expect(fs.writeFile).toHaveBeenCalledWith({
+      path: 'Nawy/b.json',
+      data: '{"a":1}',
+      directory: 'DOCS',
+      encoding: 'utf8',
+      recursive: true,
+    });
+    expect(fs.requestPermissions).not.toHaveBeenCalled();
+    expect(share.share).not.toHaveBeenCalled();
+  });
+  it('asks for storage permission on older Android and stops if refused', async () => {
+    fs.checkPermissions.mockResolvedValue({ publicStorage: 'prompt' });
+    fs.requestPermissions.mockResolvedValue({ publicStorage: 'denied' });
+    expect(await saveNativeFile('b.json', '{}')).toBeNull();
+    expect(fs.writeFile).not.toHaveBeenCalled();
+    fs.requestPermissions.mockResolvedValue({ publicStorage: 'granted' });
+    expect(await saveNativeFile('b.json', '{}')).toBe('Documents/Nawy');
+  });
+  it('says null when the write fails', async () => {
+    fs.writeFile.mockRejectedValue(new Error('EACCES'));
+    expect(await saveNativeFile('b.json', '{}')).toBeNull();
   });
 });
 

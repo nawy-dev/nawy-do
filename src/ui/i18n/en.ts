@@ -195,6 +195,8 @@ export const en: Record<MessageKey, string> = {
   'backup.kindDaily': 'Automatic',
   'backup.kindUpgrade': 'Before update',
   'backup.exported': 'Backup downloaded.',
+  'backup.saved': 'Backup saved on the phone in the {folder} folder.',
+  'backup.shared': 'Opened sharing for the backup.',
   'backup.importedNone': 'Everything in the file is already here.',
   'backup.imported':
     'Imported {changed} of {total}. Your current data was merged with it and nothing was removed.',
@@ -206,6 +208,8 @@ export const en: Record<MessageKey, string> = {
   'backup.err.newer': 'The file is from a newer version of the app. Update the app and try again.',
   'backup.err.big': 'The file is too large.',
   'backup.err.failed': 'Something went wrong and nothing was saved. Try again.',
+  'backup.err.save':
+    'Could not save the backup on the phone. Try "Share the backup" and store it from there.',
   'backup.err.unknown': 'This file is not valid; nothing was changed.',
   ...enMore,
 };

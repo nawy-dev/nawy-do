@@ -193,6 +193,9 @@ describe('useBackup on the ports', () => {
       text = await result.current.exportJson();
     });
     expect(JSON.parse(text).tasks).toHaveLength(1);
+    expect(result.current.outcome).toBeNull(); // the caller says what became of the file
+    act(() => result.current.report({ kind: 'saved', folder: 'Documents/Nawy' }));
+    expect(result.current.outcome).toEqual({ kind: 'saved', folder: 'Documents/Nawy' });
     await act(() => result.current.importText('{"app":"other"}'));
     expect(result.current.outcome).toEqual({ kind: 'error', code: 'wrong-app' });
     await act(() => result.current.importText(text));

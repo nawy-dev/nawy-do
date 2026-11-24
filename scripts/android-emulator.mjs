@@ -168,8 +168,8 @@ const alarms = adb(`shell dumpsys alarm`);
 const held = alarms.split('\n').filter((l) => l.includes(PKG)).length;
 log('alarm lines mentioning the app:', held);
 
-// Backup out (ADR 0046): the WebView cannot download, so the file must be written to the app's cache
-// and the system share sheet must open for it.
+// Backup out (ADR 0046): «download» saves a file on the phone (Documents/Nawy) with no share sheet;
+// «share» writes it to the app's cache and opens the system share sheet.
 log(
   'menu:',
   JSON.stringify(
@@ -187,6 +187,29 @@ log(
   return 'clicked';`),
   ),
 );
+shot('saved-to-phone');
+const docs = adb('shell ls /sdcard/Documents/Nawy || true');
+const saved = /nawy-do-.*\.json/.test(docs);
+const sheetEarly = /Chooser|Sharesheet|ShareSheet/i.test(adb('shell dumpsys window windows'));
+const said = await ev(
+  `return document.body.innerText.includes('حفظت النسخة الاحتياطية على الهاتف');`,
+);
+log(
+  'file in Documents/Nawy:',
+  saved,
+  '| share sheet opened by download:',
+  sheetEarly,
+  '| said so:',
+  said,
+);
+if (!saved || sheetEarly || !said) {
+  log('FAILED: «download backup» must save on the phone, with no share sheet');
+  process.exit(1);
+}
+await ev(`${HELPERS}
+  const share = [...document.querySelectorAll('button')].find((b) => b.getClientRects().length > 0 && /مشاركة النسخة/.test(b.textContent));
+  if (!share) throw new Error('share button not found');
+  share.click(); await wait(3000);`);
 shot('share-sheet');
 const cache = adb(`shell run-as ${PKG} ls cache`);
 const windows = adb('shell dumpsys window windows');
@@ -194,7 +217,7 @@ const wrote = /nawy-do-.*\.json/.test(cache);
 const chooser = /Chooser|Sharesheet|ShareSheet/i.test(windows);
 log('backup file in the app cache:', wrote, '| share sheet on screen:', chooser);
 if (!wrote || !chooser) {
-  log('FAILED: backup export through the share sheet');
+  log('FAILED: backup share through the share sheet');
   process.exit(1);
 }
 

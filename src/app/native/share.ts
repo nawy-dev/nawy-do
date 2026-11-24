@@ -39,3 +39,31 @@ export async function shareNativeText(title: string, text: string): Promise<bool
     return false;
   }
 }
+
+const SAVE_FOLDER = 'Nawy';
+
+/**
+ * Saves `text` on the phone, in Documents/Nawy, where the person finds it in the Files app (no share
+ * sheet in between). Android 10 and older ask for storage permission first; newer ones need none.
+ * Returns the folder to tell the person about, or null if it could not be written.
+ */
+export async function saveNativeFile(filename: string, text: string): Promise<string | null> {
+  try {
+    const { fs } = await plugins();
+    const have = await fs.Filesystem.checkPermissions();
+    if (have.publicStorage !== 'granted') {
+      const asked = await fs.Filesystem.requestPermissions();
+      if (asked.publicStorage !== 'granted') return null;
+    }
+    await fs.Filesystem.writeFile({
+      path: `${SAVE_FOLDER}/${filename}`,
+      data: text,
+      directory: fs.Directory.Documents,
+      encoding: fs.Encoding.UTF8,
+      recursive: true,
+    });
+    return `Documents/${SAVE_FOLDER}`;
+  } catch {
+    return null;
+  }
+}

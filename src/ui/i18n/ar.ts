@@ -210,6 +210,8 @@ export const ar = {
   'backup.kindDaily': 'تلقائية',
   'backup.kindUpgrade': 'قبل تحديث',
   'backup.exported': 'نزّلت النسخة الاحتياطية.',
+  'backup.saved': 'حفظت النسخة الاحتياطية على الهاتف في مجلد {folder}.',
+  'backup.shared': 'فتحت المشاركة للنسخة الاحتياطية.',
   'backup.importedNone': 'كل اللي في الملف موجود عندك بالفعل.',
   'backup.imported':
     'استوردت {changed} من {total}. بياناتك الحالية اتدمجت معاها ومتمسحش منها حاجة.',
@@ -220,6 +222,7 @@ export const ar = {
   'backup.err.newer': 'الملف من نسخة أحدث من التطبيق. حدّث التطبيق وجرّب تاني.',
   'backup.err.big': 'الملف كبير أكتر من اللازم.',
   'backup.err.failed': 'حصلت مشكلة وماحفظتش حاجة. جرّب تاني.',
+  'backup.err.save': 'ماقدرتش أحفظ النسخة على الهاتف. جرّب «مشاركة النسخة» وخزّنها من هناك.',
   'backup.err.unknown': 'الملف ده مش سليم، ومحصلش أي تغيير.',
   ...arMore,
 } as const;

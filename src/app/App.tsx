@@ -19,15 +19,9 @@ import { useTasks, useTrash } from '@/features/tasks';
 import { I18nProvider, makeI18n, type Lang } from '@/ui/i18n';
 import { TasksScreen } from '@/ui/shell';
 import { formatWhen, systemClock, systemToday, utcStamp } from './clock';
+import { downloadBackup, shareBackup } from './backupFiles';
 import { getDb } from './db';
-import {
-  canShareFile,
-  canShareText,
-  copyText,
-  downloadText,
-  shareText,
-  shareTextOnly,
-} from './files';
+import { canShareFile, canShareText, copyText, downloadText, shareTextOnly } from './files';
 import { installSignal } from './install';
 import { useAlerts } from './useAlerts';
 import { newId } from './ids';
@@ -125,16 +119,14 @@ export function App({ repositories, db, now = systemClock, today = systemToday }
           outcome: backup.outcome,
           onOpen: () => void backup.refresh(),
           onExport: () =>
-            void backup.exportJson().then((text) => {
-              downloadText(`nawy-do-${today()}.json`, text);
-              exportLog.mark();
-            }),
+            void downloadBackup(backup, `nawy-do-${today()}.json`).then(
+              (ok) => ok && exportLog.mark(),
+            ),
           onShare: canShareFile()
             ? () =>
-                void backup
-                  .exportJson()
-                  .then((text) => shareText(`nawy-do-${today()}.json`, text))
-                  .then((shared) => shared && exportLog.mark())
+                void shareBackup(backup, `nawy-do-${today()}.json`).then(
+                  (ok) => ok && exportLog.mark(),
+                )
             : undefined,
           lastExport: exportLog.last === undefined ? undefined : formatWhen(exportLog.last, lang),
           onImport: (file) => void file.text().then(backup.importText),
