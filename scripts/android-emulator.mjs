@@ -32,11 +32,12 @@ ws.onmessage = (m) => {
 const send = (method, params = {}) =>
   new Promise((res, rej) => {
     id += 1;
-    pending.set(id, res);
-    ws.send(JSON.stringify({ id, method, params }));
+    const mine = id;
+    pending.set(mine, res);
+    ws.send(JSON.stringify({ id: mine, method, params }));
     // A page that stops answering must say so (and what the phone was doing), not hang the run.
     setTimeout(() => {
-      if (!pending.delete(id)) return;
+      if (!pending.delete(mine)) return;
       log('NO ANSWER from the page to', method, 'in 40s; phone state follows');
       try {
         adb(`exec-out screencap -p > ${out}/no-answer.png`);
