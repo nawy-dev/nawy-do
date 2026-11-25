@@ -1,6 +1,6 @@
 # النشر على Google Play — ما أُعدّ وما يلزمك (ADR 0045)
 
-آخر تحديث: 2026-11-21. **لم يُرفع شيء إلى Play بعد** (لا حساب مطوّر). الخطوات والأسرار في [`ANDROID.md`](ANDROID.md).
+آخر تحديث: 2026-11-25. **لم يُرفع شيء إلى Play بعد** (لا حساب مطوّر). الخطوات والأسرار في [`ANDROID.md`](ANDROID.md).
 
 ## جاهز في المستودع
 
@@ -27,13 +27,14 @@
   - تنبيه في وقت المهمة على هاتفك حتى والتطبيق مغلق، بلا حساب ولا إنترنت.
   - ترتيب بالسحب، ونقل المهمة إلى قائمة أخرى بإفلاتها عليها.
   - سلة محذوفات للتراجع، وبحث، وتحديد عدة مهام معًا.
-  - نسخة احتياطية وتصدير واستيراد، وملف تقويم (.ics) وتصدير كنص.
+  - شارك نصًا من أي تطبيق إلى ناوي دو فيصير مهمة، واختصار «نية جديدة» على أيقونة التطبيق.
+  - نسخة احتياطية تُحفظ على الهاتف أو تُشارك، واستيراد، وملف تقويم (.ics) وتصدير كنص.
   - عربي وإنجليزي، ووضع فاتح وداكن.
   - بلا إعلانات ولا تتبّع ولا حساب.
 - **وصف كامل (English):**
   What are you up to? Jot down your intentions fast, order them and tick them off. Everything stays on your phone; nothing is sent to any server.
-  Quick add in plain words ("buy bread every 3 days") · several lists with Today, Starred and Scheduled · steps, repeats, dates and times · alerts at the task's time even when the app is closed, with no account or internet · drag to reorder or drop on another list · trash with undo, search, multi-select · backup, import and export, calendar file (.ics) and text export · Arabic and English, light and dark · no ads, no tracking, no account.
-  > قاعدة الصدق (AGENTS.md): راجع كل بند مقابل التطبيق قبل النشر، واحذف أي ميزة لا تراها فيه. القائمة كُتبت من الكود والاختبارات، لا من تجربة على جهاز.
+  Quick add in plain words ("buy bread every 3 days") · several lists with Today, Starred and Scheduled · steps, repeats, dates and times · alerts at the task's time even when the app is closed, with no account or internet · drag to reorder or drop on another list · trash with undo, search, multi-select · share text from any app to add a task, "New intention" shortcut on the app icon · backup saved to your phone or shared, import, calendar file (.ics) and text export · Arabic and English, light and dark · no ads, no tracking, no account.
+  > قاعدة الصدق (AGENTS.md): راجع كل بند مقابل التطبيق قبل النشر، واحذف أي ميزة لا تراها فيه. القائمة كُتبت من الكود والاختبارات، وجُرّب المشاركة والاختصار والنسخ الاحتياطي على محاكي أندرويد (API 34 و35) لا على هاتف حقيقي.
 
 ## إجابات «أمان البيانات» (Data safety)
 
