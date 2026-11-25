@@ -20,6 +20,7 @@
     "e2e": "playwright test"
   },
   "dependencies": {
+    "@capacitor/app": "8.1.0",
     "@capacitor/core": "8.6.2",
     "@capacitor/filesystem": "8.1.5",
     "@capacitor/local-notifications": "8.3.1",

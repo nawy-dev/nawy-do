@@ -52,6 +52,8 @@ jobs:
           python3 tools/android/make_icons.py android/app/src/main/res
       - name: Reminder permissions
         run: python3 tools/android/patch_manifest.py android/app/src/main/AndroidManifest.xml
+      - name: Accept text shared from other apps (ADR 0048)
+        run: python3 tools/android/patch_main_activity.py android/app/src/main/java/todo/nawy/app/MainActivity.java android/app/src/main/AndroidManifest.xml
       - name: Version and release signing
         run: python3 tools/android/patch_gradle.py android/app/build.gradle
       - name: Copy the web app into it
