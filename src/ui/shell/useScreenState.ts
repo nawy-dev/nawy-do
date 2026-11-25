@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useShortcuts } from './useShortcuts';
 
 /** A list sheet: creating a new one, or the options of an existing one. */
@@ -9,7 +9,7 @@ export type ListSheetState = { mode: 'create' } | { mode: 'edit'; id: string } |
  * Search and selection are mutually exclusive, and both are cleared when the view changes
  * (a pick never crosses views).
  */
-export function useScreenState(startAdding = false) {
+export function useScreenState(startAdding = false, addRequest = 0) {
   const [sheet, setSheet] = useState<ListSheetState>(null);
   const [dataOpen, setDataOpen] = useState(false);
   const [trashOpen, setTrashOpen] = useState(false);
@@ -17,6 +17,10 @@ export function useScreenState(startAdding = false) {
   const [clearIds, setClearIds] = useState<string[] | null>(null);
   const [exportOpen, setExportOpen] = useState(false);
   const [adding, setAdding] = useState(startAdding);
+  // The icon shortcut asked for the add sheet while the app was already open.
+  useEffect(() => {
+    if (addRequest > 0) setAdding(true);
+  }, [addRequest]);
   const [menuOpen, setMenuOpen] = useState(false);
   // `null` is off. While on, results come from ALL tasks, not just the current view.
   const [query, setQuery] = useState<string | null>(null);

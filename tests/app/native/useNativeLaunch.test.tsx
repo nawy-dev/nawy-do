@@ -1,4 +1,4 @@
-import { renderHook } from '@testing-library/react';
+import { act, renderHook } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { Launch } from '@/core/model';
 
@@ -46,5 +46,14 @@ describe('useNativeLaunch', () => {
     expect(second).toHaveBeenCalledExactlyOnceWith('خبز');
     unmount();
     expect(links.stop).toHaveBeenCalledOnce();
+  });
+  it('counts the icon shortcut taps so each one opens the add sheet', async () => {
+    inApp(true);
+    const { result } = renderHook(() => useNativeLaunch(vi.fn(), () => 0));
+    await Promise.resolve();
+    expect(result.current).toBe(0);
+    act(() => links.push?.({ newTask: true, shared: undefined }));
+    act(() => links.push?.({ newTask: true, shared: undefined }));
+    expect(result.current).toBe(2);
   });
 });
