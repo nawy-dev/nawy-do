@@ -215,8 +215,18 @@ for (const c of cases) {
       continue;
     }
     const before = await ev(`return ${PAGE};`);
-    await swipe({ ...c, dx: c.dx * dir }, from);
+    // Keep the whole stroke on the screen and away from its edges (the edges are the system's
+    // back gesture): start where both ends fit.
+    const dxs = c.dx * dir;
+    from.x = Math.min(Math.max(from.x, 40 + Math.max(0, -dxs)), seen.iw - 40 - Math.max(0, dxs));
+    await swipe({ ...c, dx: dxs }, from);
     await sleep(700);
+    const focus = adb('shell dumpsys window | grep -m1 mCurrentFocus || true');
+    if (!focus.includes(PKG)) {
+      log('FAILED: the app is not in front after a swipe:', focus.trim(), '| case', c.name, dir);
+      shot('left-the-app');
+      process.exit(1);
+    }
     const after = await ev(`return ${PAGE};`);
     const opened =
       after.sheets > before.sheets ||
@@ -283,6 +293,28 @@ if (!sharedWarm) {
   log('FAILED: shared text did not arrive while the app was running');
   process.exit(1);
 }
+
+// The «new intention» shortcut on the icon (static shortcut, link nawydo://new): registered with the
+// launcher, and opening it while the app runs shows the add sheet.
+const shortcuts = adb(`shell dumpsys shortcut ${PKG} || true`);
+log('static shortcut registered:', /new_task/.test(shortcuts));
+if (!/new_task/.test(shortcuts)) {
+  log('FAILED: the «new intention» shortcut is not registered');
+  process.exit(1);
+}
+adb(`shell am start -n ${PKG}/.MainActivity -a android.intent.action.VIEW -d nawydo://new`);
+await sleep(3000);
+shot('shortcut-warm');
+const sheetWarm = await ev(
+  `return document.querySelectorAll('.sheet [aria-label="ناوي تعمل إيه؟"], .sheet input').length > 0;`,
+);
+log('shortcut opened the add sheet while running:', sheetWarm);
+if (!sheetWarm) {
+  log('FAILED: the shortcut did not open the add sheet');
+  process.exit(1);
+}
+await ev(`document.querySelector('.backdrop')?.click();`);
+await sleep(600);
 
 // Safe areas (ADR 0047). The emulator's WebView may be older than Chromium 140: then Capacitor pads
 // the WebView itself and both env() and the variable are 0, so this cannot reproduce the overlap a
@@ -417,49 +449,64 @@ if (!posted || held === 0) {
 }
 log('OK: the phone rang the reminder');
 
-// Share target, app closed (the process was ended above): the share starts the app and is not lost.
-adb('shell input keyevent KEYCODE_HOME');
-adb(`shell am force-stop ${PKG}`);
-await sleep(1000);
-adb(
-  `shell am start -n ${PKG}/.MainActivity -a android.intent.action.SEND -t text/plain -e android.intent.extra.TEXT SharedCold`,
-);
-let sharedCold = false;
-for (let i = 0; i < 12 && !sharedCold; i += 1) {
-  await sleep(2500);
-  try {
-    const pid = adb(`shell pidof ${PKG} || true`).trim();
-    if (!pid) continue;
-    adb(`forward tcp:9222 localabstract:webview_devtools_remote_${pid}`);
-    const page = (await (await fetch('http://127.0.0.1:9222/json')).json()).find(
-      (t) => t.type === 'page',
-    );
-    if (!page) continue;
-    const sock = new WebSocket(page.webSocketDebuggerUrl);
-    await new Promise((res, rej) => {
-      sock.onopen = res;
-      sock.onerror = () => rej(new Error('websocket failed'));
-    });
-    const text = await new Promise((res) => {
-      sock.onmessage = (m) => res(JSON.parse(m.data).result?.result?.value);
-      sock.send(
-        JSON.stringify({
-          id: 1,
-          method: 'Runtime.evaluate',
-          params: { expression: 'document.body.innerText', returnByValue: true },
-        }),
+// Cold start (the process was ended above): a share, then the icon shortcut, must each start the app
+// and not be lost. `check` is evaluated in the page once it is up.
+async function coldStart(args, check) {
+  adb('shell input keyevent KEYCODE_HOME');
+  adb(`shell am force-stop ${PKG}`);
+  await sleep(1000);
+  adb(`shell am start -n ${PKG}/.MainActivity ${args}`);
+  for (let i = 0; i < 12; i += 1) {
+    await sleep(2500);
+    try {
+      const pid = adb(`shell pidof ${PKG} || true`).trim();
+      if (!pid) continue;
+      adb(`forward tcp:9222 localabstract:webview_devtools_remote_${pid}`);
+      const page = (await (await fetch('http://127.0.0.1:9222/json')).json()).find(
+        (t) => t.type === 'page',
       );
-    });
-    sock.close();
-    sharedCold = typeof text === 'string' && text.includes('SharedCold');
-  } catch (e) {
-    log('cold share check retry:', String(e).slice(0, 80));
+      if (!page) continue;
+      const sock = new WebSocket(page.webSocketDebuggerUrl);
+      await new Promise((res, rej) => {
+        sock.onopen = res;
+        sock.onerror = () => rej(new Error('websocket failed'));
+      });
+      const value = await new Promise((res) => {
+        sock.onmessage = (m) => res(JSON.parse(m.data).result?.result?.value);
+        sock.send(
+          JSON.stringify({
+            id: 1,
+            method: 'Runtime.evaluate',
+            params: { expression: check, returnByValue: true },
+          }),
+        );
+      });
+      sock.close();
+      if (value === true) return true;
+    } catch (e) {
+      log('cold start check retry:', String(e).slice(0, 80));
+    }
   }
+  return false;
 }
+const coldShare = await coldStart(
+  '-a android.intent.action.SEND -t text/plain -e android.intent.extra.TEXT SharedCold',
+  `document.body.innerText.includes('SharedCold')`,
+);
 shot('shared-cold');
-log('text shared while the app was closed became a task:', sharedCold);
-if (!sharedCold) {
+log('text shared while the app was closed became a task:', coldShare);
+if (!coldShare) {
   log('FAILED: shared text did not arrive on a cold start');
   process.exit(1);
 }
-log('OK: sharing into the app works, open or closed');
+const coldNew = await coldStart(
+  '-a android.intent.action.VIEW -d nawydo://new',
+  `document.querySelectorAll('.sheet input, .sheet [aria-label="ناوي تعمل إيه؟"]').length > 0`,
+);
+shot('shortcut-cold');
+log('shortcut on a cold start opened the add sheet:', coldNew);
+if (!coldNew) {
+  log('FAILED: the shortcut did not open the add sheet on a cold start');
+  process.exit(1);
+}
+log('OK: sharing and the icon shortcut work, with the app open or closed');

@@ -66,6 +66,8 @@ export interface TasksScreenProps {
   offers: Offers;
   /** Opened by the «new intention» shortcut: focus the add field. */
   focusAdd: boolean;
+  /** Counts the icon shortcut's «new intention» taps while the app runs: each change opens the add sheet. */
+  addRequest?: number;
   onSelect: (s: Selection) => void;
   /** `literal`: save the text as typed, without reading dates and so on out of it. */
   onAdd: (text: string, literal: boolean) => void;

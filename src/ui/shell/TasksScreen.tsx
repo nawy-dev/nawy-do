@@ -30,7 +30,7 @@ export type { DataProps, TasksScreenProps, TrashProps } from './types';
 /** The whole screen as a function of its props: easy to test and to preview without a database. */
 export function TasksScreen(p: TasksScreenProps) {
   const { t } = useI18n();
-  const ui = useScreenState(p.focusAdd === true);
+  const ui = useScreenState(p.focusAdd === true, p.addRequest);
   const selection = resolveSelection(p.selection, p.lists);
   const list = p.lists.find((l) => l.id === selectedListId(selection));
   const visible =

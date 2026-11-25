@@ -95,7 +95,7 @@ export function App({ repositories, db, now = systemClock, today = systemToday }
     shareDone.current = true;
     void add(launch.shared);
   }, [launch, add]);
-  useNativeLaunch((text) => void add(text), now);
+  const newRequests = useNativeLaunch((text) => void add(text), now);
 
   // The sheet shows the task as it is now; if it was deleted elsewhere it simply closes.
   const editing = tasks.tasks.find((t) => t.id === openId);
@@ -184,6 +184,7 @@ export function App({ repositories, db, now = systemClock, today = systemToday }
         applyUpdate={applyUpdate}
         offers={{ onInstall, onAlerts }}
         focusAdd={launch.newTask}
+        addRequest={newRequests}
         onSelect={setChosen}
         onAdd={(text, literal) => {
           const q = quickTask(text, literal, selection, lists.lists, today());

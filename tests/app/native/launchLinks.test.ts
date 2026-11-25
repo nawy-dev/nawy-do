@@ -33,6 +33,9 @@ describe('launchFromUrl', () => {
     );
     expect(l?.shared).toBe('عنوان https://a.b/x');
   });
+  it('reads the icon shortcut as a request for the add sheet', () => {
+    expect(launchFromUrl('nawydo://new')).toEqual({ newTask: true, shared: undefined });
+  });
   it('ignores other links and links with nothing shared', () => {
     expect(launchFromUrl('https://do.nawy.app/?share_text=x')).toBeNull();
     expect(launchFromUrl('nawydo://share')?.shared).toBeUndefined();

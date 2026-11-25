@@ -4,9 +4,13 @@
 // The query is the same one the PWA's share_target sends, so `parseLaunch` reads both.
 import { parseLaunch, type Launch } from '@/core/model';
 
-/** The launch parameters inside a `nawydo://` link, or null for any other link. */
+/**
+ * The launch parameters inside a `nawydo://` link, or null for any other link. `nawydo://new` is
+ * the «new intention» shortcut on the app icon.
+ */
 export function launchFromUrl(url: string): Launch | null {
   if (!url.startsWith('nawydo://')) return null;
+  if (url.startsWith('nawydo://new')) return { newTask: true, shared: undefined };
   const at = url.indexOf('?');
   return parseLaunch(at < 0 ? '' : url.slice(at));
 }
