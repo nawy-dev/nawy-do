@@ -215,8 +215,18 @@ for (const c of cases) {
       continue;
     }
     const before = await ev(`return ${PAGE};`);
-    await swipe({ ...c, dx: c.dx * dir }, from);
+    // Keep the whole stroke on the screen and away from its edges (the edges are the system's
+    // back gesture): start where both ends fit.
+    const dxs = c.dx * dir;
+    from.x = Math.min(Math.max(from.x, 40 + Math.max(0, -dxs)), seen.iw - 40 - Math.max(0, dxs));
+    await swipe({ ...c, dx: dxs }, from);
     await sleep(700);
+    const focus = adb('shell dumpsys window | grep -m1 mCurrentFocus || true');
+    if (!focus.includes(PKG)) {
+      log('FAILED: the app is not in front after a swipe:', focus.trim(), '| case', c.name, dir);
+      shot('left-the-app');
+      process.exit(1);
+    }
     const after = await ev(`return ${PAGE};`);
     const opened =
       after.sheets > before.sheets ||
