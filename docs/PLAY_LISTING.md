@@ -31,6 +31,7 @@
   - نسخة احتياطية تُحفظ على الهاتف أو تُشارك، واستيراد، وملف تقويم (.ics) وتصدير كنص.
   - عربي وإنجليزي، ووضع فاتح وداكن.
   - بلا إعلانات ولا تتبّع ولا حساب.
+- **English listing (لو أضفت اللغة الإنجليزية، كل لغة تحتاج الاسم والوصف القصير والكامل وإلا تظهر «بعض اللغات بها أخطاء»):** الاسم `Nawy To Do`، الوصف القصير (≤80) `Fast, private tasks on your phone, with alerts on time.`
 - **وصف كامل (English):**
   What are you up to? Jot down your intentions fast, order them and tick them off. Everything stays on your phone; nothing is sent to any server.
   Quick add in plain words ("buy bread every 3 days") · several lists with Today, Starred and Scheduled · steps, repeats, dates and times · alerts at the task's time even when the app is closed, with no account or internet · drag to reorder or drop on another list · trash with undo, search, multi-select · share text from any app to add a task, "New intention" shortcut on the app icon · backup saved to your phone or shared, import, calendar file (.ics) and text export · Arabic and English, light and dark · no ads, no tracking, no account.
